@@ -1,0 +1,49 @@
+{
+  "schema_version": "0.1.0",
+  "trip": {
+    "title": "サンプル旅行",
+    "timezone": "Asia/Tokyo",
+    "start_date": "2026-04-01",
+    "days": [
+      {
+        "day": 1,
+        "date": "2026-04-01",
+        "notes": "",
+        "items": [
+          {
+            "id": "item-001",
+            "type": "move",
+            "start": "08:30",
+            "end": "09:30",
+            "title": "新幹線で移動",
+            "from": "東京駅",
+            "to": "名古屋駅",
+            "transport": "train",
+            "cost": 11000,
+            "memo": ""
+          },
+          {
+            "id": "item-002",
+            "type": "place",
+            "start": "10:00",
+            "end": "11:30",
+            "title": "名古屋城",
+            "location": "名古屋市中区",
+            "memo": ""
+          },
+          {
+            "id": "item-003",
+            "type": "do",
+            "start": "12:00",
+            "end": "13:00",
+            "title": "ランチ",
+            "category": "food",
+            "location": "栄",
+            "cost": 1500,
+            "memo": ""
+          }
+        ]
+      }
+    ]
+  }
+}
