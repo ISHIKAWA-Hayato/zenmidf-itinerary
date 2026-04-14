@@ -14,6 +14,8 @@ const elements = {
   tableBody: document.getElementById("table-body"),
   addRow: document.getElementById("add-row"),
   downloadJson: document.getElementById("download-json"),
+  importJsonBtn: document.getElementById("import-json-btn"),
+  importJsonInput: document.getElementById("import-json"),
 };
 
 function createInput(value = "") {
@@ -242,6 +244,35 @@ function downloadJson() {
   URL.revokeObjectURL(url);
 }
 
+function validateImportedData(data) {
+  return (
+    data &&
+    typeof data === "object" &&
+    data.trip &&
+    Array.isArray(data.trip.days)
+  );
+}
+
+function handleImportJson(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!validateImportedData(data)) {
+        alert("JSONの形式が不正です（trip.days が必要です）。");
+        return;
+      }
+      state.data = data;
+      state.activeDayIndex = 0;
+      render();
+    } catch (err) {
+      alert("JSONの解析に失敗しました。");
+    }
+  };
+  reader.readAsText(file, "utf-8");
+}
+
 function render() {
   if (!state.data?.trip) return;
   const trip = state.data.trip;
@@ -260,6 +291,13 @@ async function init() {
 
     elements.addRow.addEventListener("click", addRow);
     elements.downloadJson.addEventListener("click", downloadJson);
+    elements.importJsonBtn.addEventListener("click", () => elements.importJsonInput.click());
+    elements.importJsonInput.addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      handleImportJson(file);
+      event.target.value = "";
+    });
+
     render();
   } catch (error) {
     console.error(error);

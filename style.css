@@ -7,6 +7,8 @@
   --primary: #2563eb;
   --border: #e5e7eb;
   --table-header: #f3f4f6;
+  --danger: #ef4444;
+  --success: #22c55e;
 }
 
 * {
@@ -79,10 +81,11 @@ body {
 .table-actions {
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   margin-bottom: 12px;
 }
 
-#add-row {
+.table-actions button {
   border: none;
   background: var(--primary);
   color: #fff;
@@ -90,6 +93,14 @@ body {
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
+}
+
+#download-json {
+  background: #0f766e;
+}
+
+#import-json-btn {
+  background: #6b7280;
 }
 
 .table-wrap {
@@ -121,6 +132,16 @@ body {
   padding: 4px 6px;
   border-radius: 6px;
   font-size: 12px;
+}
+
+.input.invalid {
+  border-color: var(--danger);
+  background: #fef2f2;
+}
+
+.input.valid {
+  border-color: var(--success);
+  background: #f0fdf4;
 }
 
 .delete-btn {
