@@ -109,6 +109,8 @@ function normalizeDays() {
 }
 
 function validateTripMeta() {
+  const dateErrorMessage = "開始日は YYYY-MM-DD 形式で入力してください";
+  const dayStartErrorMessage = "DayStart は HH:MM 形式で入力してください";
   const trip = state.data?.trip;
   if (!trip) return true;
 
@@ -124,19 +126,20 @@ function validateTripMeta() {
 
   setValidity(elements.tripTitle, titleOk, titleOk ? "" : "タイトルは必須です");
   setValidity(elements.tripTimezone, timezoneOk, timezoneOk ? "" : "タイムゾーンは必須です");
-  setValidity(elements.tripStartDate, startDateOk, startDateOk ? "" : "開始日は YYYY-MM-DD 形式で入力してください");
+  setValidity(elements.tripStartDate, startDateOk, startDateOk ? "" : dateErrorMessage);
+  // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
   setValidity(
     elements.tripDayStart,
     dayStart === "" ? null : dayStartOk,
-    dayStartOk ? "" : "DayStart は HH:MM 形式で入力してください"
+    dayStartOk ? "" : dayStartErrorMessage
   );
 
   setFieldError(elements.tripTitleError, titleOk ? "" : "タイトルは必須です");
   setFieldError(elements.tripTimezoneError, timezoneOk ? "" : "タイムゾーンは必須です");
-  setFieldError(elements.tripStartDateError, startDateOk ? "" : "開始日は YYYY-MM-DD 形式で入力してください");
+  setFieldError(elements.tripStartDateError, startDateOk ? "" : dateErrorMessage);
   setFieldError(
     elements.tripDayStartError,
-    dayStart === "" || dayStartOk ? "" : "DayStart は HH:MM 形式で入力してください"
+    dayStart === "" || dayStartOk ? "" : dayStartErrorMessage
   );
 
   return titleOk && timezoneOk && startDateOk && dayStartOk;
@@ -349,7 +352,7 @@ function addDay() {
 function removeDay() {
   const trip = state.data?.trip;
   if (!trip?.days || trip.days.length <= 1) {
-    alert("削除できません。最後のDayは残す必要があります。");
+    alert("最後のDayは削除できません。");
     return;
   }
 
