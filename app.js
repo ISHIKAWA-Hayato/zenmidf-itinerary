@@ -36,6 +36,22 @@ function createSelect(options, value = "") {
   return select;
 }
 
+function isValidTime(value) {
+  return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+}
+
+function timeToMinutes(value) {
+  const [h, m] = value.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function setValidity(input, ok, message = "") {
+  input.classList.remove("invalid", "valid");
+  if (ok === null) return;
+  input.classList.add(ok ? "valid" : "invalid");
+  input.title = message;
+}
+
 function renderTripMeta(trip) {
   elements.tripTitle.textContent = trip.title ?? "-";
   elements.tripTimezone.textContent = trip.timezone ?? "-";
@@ -74,6 +90,8 @@ function createRow(item, rowIndex) {
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
 
+  titleInput.placeholder = "必須";
+
   const cells = [
     startInput,
     endInput,
@@ -103,11 +121,55 @@ function createRow(item, rowIndex) {
   deleteTd.appendChild(deleteBtn);
   tr.appendChild(deleteTd);
 
+  function validateRow() {
+    const start = startInput.value.trim();
+    const end = endInput.value.trim();
+    const title = titleInput.value.trim();
+
+    const startValid = start === "" ? true : isValidTime(start);
+    const endValid = end === "" ? true : isValidTime(end);
+
+    setValidity(
+      startInput,
+      start === "" ? null : startValid,
+      startValid ? "" : "時刻は HH:MM 形式"
+    );
+    setValidity(
+      endInput,
+      end === "" ? null : endValid,
+      endValid ? "" : "時刻は HH:MM 形式"
+    );
+
+    if (startValid && endValid && start && end) {
+      const orderOk = timeToMinutes(start) <= timeToMinutes(end);
+      if (!orderOk) {
+        setValidity(startInput, false, "Start <= End である必要があります");
+        setValidity(endInput, false, "Start <= End である必要があります");
+      }
+    }
+
+    const titleOk = title.length > 0;
+    setValidity(
+      titleInput,
+      titleOk,
+      titleOk ? "" : "Title は必須です"
+    );
+  }
+
   // Update state on input change
-  startInput.addEventListener("input", () => updateItem(rowIndex, "start", startInput.value));
-  endInput.addEventListener("input", () => updateItem(rowIndex, "end", endInput.value));
+  startInput.addEventListener("input", () => {
+    updateItem(rowIndex, "start", startInput.value);
+    validateRow();
+  });
+  endInput.addEventListener("input", () => {
+    updateItem(rowIndex, "end", endInput.value);
+    validateRow();
+  });
   typeSelect.addEventListener("change", () => updateItem(rowIndex, "type", typeSelect.value));
-  titleInput.addEventListener("input", () => updateItem(rowIndex, "title", titleInput.value));
+  titleInput.addEventListener("input", () => {
+    updateItem(rowIndex, "title", titleInput.value);
+    validateRow();
+  });
   fromInput.addEventListener("input", () => updateItem(rowIndex, "from", fromInput.value));
   toInput.addEventListener("input", () => updateItem(rowIndex, "to", toInput.value));
   locationInput.addEventListener("input", () => updateItem(rowIndex, "location", locationInput.value));
@@ -117,6 +179,7 @@ function createRow(item, rowIndex) {
   costInput.addEventListener("input", () => updateItem(rowIndex, "cost", Number(costInput.value)));
   memoInput.addEventListener("input", () => updateItem(rowIndex, "memo", memoInput.value));
 
+  validateRow();
   return tr;
 }
 
