@@ -133,7 +133,10 @@ function validateTripMeta() {
   setFieldError(elements.tripTitleError, titleOk ? "" : "タイトルは必須です");
   setFieldError(elements.tripTimezoneError, timezoneOk ? "" : "タイムゾーンは必須です");
   setFieldError(elements.tripStartDateError, startDateOk ? "" : "開始日は YYYY-MM-DD 形式で入力してください");
-  setFieldError(elements.tripDayStartError, dayStartOk ? "" : "DayStart は HH:MM 形式で入力してください");
+  setFieldError(
+    elements.tripDayStartError,
+    dayStart === "" || dayStartOk ? "" : "DayStart は HH:MM 形式で入力してください"
+  );
 
   return titleOk && timezoneOk && startDateOk && dayStartOk;
 }
