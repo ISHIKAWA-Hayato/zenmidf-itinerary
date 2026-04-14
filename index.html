@@ -14,13 +14,35 @@
     </header>
 
     <section class="trip-meta">
-      <div><strong>タイトル:</strong> <span id="trip-title">-</span></div>
-      <div><strong>タイムゾーン:</strong> <span id="trip-timezone">-</span></div>
-      <div><strong>開始日:</strong> <span id="trip-start-date">-</span></div>
-      <div><strong>DayStart:</strong> <span id="trip-day-start">-</span></div>
+      <label class="trip-meta-field">
+        <span>タイトル</span>
+        <input id="trip-title" class="input" type="text" placeholder="必須" />
+        <small id="trip-title-error" class="field-error"></small>
+      </label>
+      <label class="trip-meta-field">
+        <span>タイムゾーン</span>
+        <input id="trip-timezone" class="input" type="text" placeholder="必須" />
+        <small id="trip-timezone-error" class="field-error"></small>
+      </label>
+      <label class="trip-meta-field">
+        <span>開始日</span>
+        <input id="trip-start-date" class="input" type="date" />
+        <small id="trip-start-date-error" class="field-error"></small>
+      </label>
+      <label class="trip-meta-field">
+        <span>DayStart</span>
+        <input id="trip-day-start" class="input" type="time" />
+        <small id="trip-day-start-error" class="field-error"></small>
+      </label>
     </section>
 
-    <section class="tabs" id="day-tabs"></section>
+    <section class="day-tabs-section">
+      <div class="tabs" id="day-tabs"></div>
+      <div class="day-actions">
+        <button id="add-day" type="button">+ Dayを追加</button>
+        <button id="remove-day" type="button">現在のDayを削除</button>
+      </div>
+    </section>
 
     <section class="pdf-controls">
       <div class="pdf-controls__label">PDF出力（日選択）</div>
