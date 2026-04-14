@@ -413,6 +413,9 @@ async function exportPdf() {
     elements.pdfRoot.appendChild(createPdfPage(day, trip));
   });
 
+  // DOM描画を待つ（空PDF防止）
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
   const filename = `itinerary_${trip.start_date ?? "trip"}.pdf`;
   const opt = {
     margin: [10, 10, 10, 10],

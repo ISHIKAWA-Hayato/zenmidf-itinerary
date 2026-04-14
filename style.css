@@ -200,8 +200,9 @@ body {
 /* PDF用 */
 .pdf-root {
   position: fixed;
-  left: -9999px;
-  top: 0;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
   width: 210mm;
 }
 
