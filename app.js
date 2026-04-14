@@ -178,7 +178,6 @@ function createRow(item, rowIndex) {
     );
   }
 
-  // Update state on input change
   startInput.addEventListener("input", () => {
     updateItem(rowIndex, "start", startInput.value);
     validateRow();
@@ -415,27 +414,45 @@ async function exportPdf() {
 
   document.body.classList.add("pdf-exporting");
 
-  // フォント＆レイアウトの確定を待つ
   if (document.fonts && document.fonts.ready) {
     await document.fonts.ready;
   }
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  const filename = `itinerary_${trip.start_date ?? "trip"}.pdf`;
-  const opt = {
-    margin: [10, 10, 10, 10],
-    filename,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, backgroundColor: "#ffffff" },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-    pagebreak: { mode: ["css", "legacy"] },
-  };
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const pageWidth = pdf.internal.pageSize.getWidth();
+  const pageHeight = pdf.internal.pageSize.getHeight();
 
-  try {
-    await html2pdf().set(opt).from(elements.pdfRoot).save();
-  } finally {
-    document.body.classList.remove("pdf-exporting");
+  const pages = elements.pdfRoot.querySelectorAll(".pdf-page");
+  for (let i = 0; i < pages.length; i += 1) {
+    const page = pages[i];
+
+    const canvas = await html2canvas(page, {
+      scale: 2,
+      backgroundColor: "#ffffff",
+      useCORS: true,
+    });
+
+    let imgWidth = pageWidth;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    if (imgHeight > pageHeight) {
+      imgHeight = pageHeight;
+      imgWidth = (canvas.width * imgHeight) / canvas.height;
+    }
+
+    const x = (pageWidth - imgWidth) / 2;
+    const y = (pageHeight - imgHeight) / 2;
+
+    const imgData = canvas.toDataURL("image/jpeg", 1.0);
+    if (i > 0) pdf.addPage();
+    pdf.addImage(imgData, "JPEG", x, y, imgWidth, imgHeight);
   }
+
+  pdf.save(`itinerary_${trip.start_date ?? "trip"}.pdf`);
+
+  document.body.classList.remove("pdf-exporting");
 }
 
 function render() {

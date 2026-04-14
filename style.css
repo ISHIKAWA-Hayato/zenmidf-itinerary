@@ -204,17 +204,17 @@ body {
   left: 0;
   width: 210mm;
   background: #fff;
-  visibility: hidden; /* デフォルトは非表示 */
+  visibility: hidden;
   pointer-events: none;
   z-index: 9999;
 }
 
 .pdf-exporting .pdf-root {
-  visibility: visible; /* 出力中だけ表示 */
+  visibility: visible;
 }
 
 .pdf-exporting .app {
-  opacity: 0; /* ちらつき対策 */
+  opacity: 0;
 }
 
 .pdf-page {
