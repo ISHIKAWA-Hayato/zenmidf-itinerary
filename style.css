@@ -199,12 +199,20 @@ body {
 
 /* PDF用 */
 .pdf-root {
+  display: none;
   position: fixed;
   inset: 0;
   width: 210mm;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 1;
+  background: #fff;
+  z-index: 9999;
+}
+
+.pdf-exporting .pdf-root {
+  display: block;
+}
+
+.pdf-exporting .app {
+  visibility: hidden;
 }
 
 .pdf-page {
