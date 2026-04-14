@@ -148,7 +148,7 @@ function validateTripMeta() {
   setValidity(
     elements.tripDayStart,
     dayStart === "" ? null : dayStartOk,
-    dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
+    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
   );
 
   setFieldError(
@@ -630,10 +630,13 @@ async function init() {
       trip.title = elements.tripTitle.value;
       trip.timezone = elements.tripTimezone.value;
       trip.start_date = elements.tripStartDate.value;
-      if (elements.tripDayStart.value === "") {
+      const dayStartValue = elements.tripDayStart.value;
+      if (dayStartValue === "") {
         delete trip.day_start;
+      } else if (isValidTime(dayStartValue)) {
+        trip.day_start = dayStartValue;
       } else {
-        trip.day_start = elements.tripDayStart.value;
+        delete trip.day_start;
       }
       if (trip.start_date !== prevStartDate && isValidDate(trip.start_date)) {
         normalizeDays();
