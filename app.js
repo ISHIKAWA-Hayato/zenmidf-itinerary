@@ -1,6 +1,8 @@
 const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
-// URLが極端に長くなるとブラウザや共有先で扱えないため上限を設ける
+const DEFAULT_LOCALE = "ja-JP";
+const COST_PATTERN = /^\d+$/;
+// URLが極端に長くなるとブラウザや共有先で扱えないため、一般的なURL上限未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
 const state = {
@@ -40,6 +42,7 @@ const elements = {
   pdfDayList: document.getElementById("pdf-day-list"),
   downloadPdf: document.getElementById("download-pdf"),
   pdfRoot: document.getElementById("pdf-root"),
+  tableCaption: document.getElementById("itinerary-table-caption"),
   saveStatus: document.getElementById("save-status"),
   toast: document.getElementById("toast"),
   readonlyBanner: document.getElementById("readonly-banner"),
@@ -125,6 +128,11 @@ function fromBase64Url(value) {
 function setReadOnlyMode(readOnly) {
   state.readOnly = readOnly;
   if (elements.readonlyBanner) elements.readonlyBanner.hidden = !readOnly;
+  if (elements.tableCaption) {
+    elements.tableCaption.textContent = readOnly
+      ? "日ごとの行程閲覧テーブル"
+      : "日ごとの行程編集テーブル";
+  }
 
   const editTargets = [
     elements.tripTitle,
@@ -150,7 +158,7 @@ function scheduleAutosave() {
   state.saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      const timeText = new Date().toLocaleTimeString(navigator.language || "ja-JP", { hour12: false });
+      const timeText = new Date().toLocaleTimeString(navigator.language || DEFAULT_LOCALE, { hour12: false });
       setSaveStatus(`自動保存済み（${timeText}）`);
     } catch (error) {
       setSaveStatus("自動保存に失敗しました");
@@ -338,7 +346,7 @@ function createRow(item, rowIndex) {
   const memoInput = createInput(item.memo);
   costInput.type = "text";
   costInput.inputMode = "numeric";
-  costInput.pattern = "\\d*";
+  costInput.pattern = "\\d+";
 
   titleInput.placeholder = "必須";
 
@@ -382,7 +390,7 @@ function createRow(item, rowIndex) {
 
     const startValid = start === "" ? true : isValidTime(start);
     const endValid = end === "" ? true : isValidTime(end);
-    const costValid = costRaw === "" ? true : /^\d+$/.test(costRaw);
+    const costValid = costRaw === "" ? true : COST_PATTERN.test(costRaw);
 
     setValidity(
       startInput,
@@ -440,7 +448,7 @@ function createRow(item, rowIndex) {
     const raw = costInput.value.trim();
     if (raw === "") {
       updateItem(rowIndex, "cost", "");
-    } else if (/^\d+$/.test(raw)) {
+    } else if (COST_PATTERN.test(raw)) {
       updateItem(rowIndex, "cost", Number(raw));
     }
     validateRow();
@@ -624,7 +632,7 @@ async function copyShareUrl() {
     showToast("共有URLをコピーしました（閲覧専用）");
   } catch (error) {
     showToast("クリップボードが使えないためダイアログからURLをコピーしてください");
-    window.prompt("共有URL（Ctrl/Cmd+C でコピー）", shareText);
+    window.prompt("共有URL（ダイアログの内容を手動でコピーしてください）", shareText);
   }
 }
 
