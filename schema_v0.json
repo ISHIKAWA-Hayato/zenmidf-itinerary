@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/ISHIKAWA-Hayato/zenmidf-itinerary/schema_v0.json",
+  "title": "Zenmidf Itinerary Schema v0",
+  "type": "object",
+  "required": ["schema_version", "trip"],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "trip": {
+      "type": "object",
+      "required": ["title", "timezone", "start_date", "days"],
+      "properties": {
+        "title": { "type": "string" },
+        "timezone": { "type": "string" },
+        "start_date": { "type": "string", "format": "date" },
+        "day_start": { "$ref": "#/$defs/time" },
+        "days": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/day" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "day": {
+      "type": "object",
+      "required": ["day", "date", "items"],
+      "properties": {
+        "day": { "type": "integer", "minimum": 1 },
+        "date": { "type": "string", "format": "date" },
+        "notes": { "type": "string" },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "item": {
+      "oneOf": [
+        { "$ref": "#/$defs/moveItem" },
+        { "$ref": "#/$defs/placeItem" },
+        { "$ref": "#/$defs/doItem" }
+      ]
+    },
+    "time": {
+      "type": "string",
+      "pattern": "^(?:[01]\d|2[0-3]):[0-5]\d$"
+    },
+    "moveItem": {
+      "type": "object",
+      "required": ["id", "type", "start", "end", "title", "from", "to", "transport"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "move" },
+        "start": { "$ref": "#/$defs/time" },
+        "end": { "$ref": "#/$defs/time" },
+        "title": { "type": "string" },
+        "from": { "type": "string" },
+        "to": { "type": "string" },
+        "transport": {
+          "type": "string",
+          "enum": [
+            "train",
+            "local-bus",
+            "highway-bus",
+            "aircraft",
+            "ship",
+            "taxi",
+            "rent-a-car",
+            "on-foot",
+            "bicycle",
+            "other"
+          ]
+        },
+        "cost": { "type": "number", "minimum": 0 },
+        "memo": { "type": "string" },
+        "other_detail": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "placeItem": {
+      "type": "object",
+      "required": ["id", "type", "start", "end", "title", "location", "kind"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "place" },
+        "start": { "$ref": "#/$defs/time" },
+        "end": { "$ref": "#/$defs/time" },
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "station",
+            "bus-stop",
+            "airport",
+            "port",
+            "spot",
+            "hotel",
+            "restaurant",
+            "other"
+          ]
+        },
+        "cost": { "type": "number", "minimum": 0 },
+        "memo": { "type": "string" },
+        "other_detail": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "doItem": {
+      "type": "object",
+      "required": ["id", "type", "start", "end", "title", "category"],
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "const": "do" },
+        "start": { "$ref": "#/$defs/time" },
+        "end": { "$ref": "#/$defs/time" },
+        "title": { "type": "string" },
+        "category": {
+          "type": "string",
+          "enum": [
+            "transfer",
+            "visit",
+            "sight-seeing",
+            "food",
+            "stay",
+            "shopping",
+            "event",
+            "work",
+            "other"
+          ]
+        },
+        "location": { "type": "string" },
+        "cost": { "type": "number", "minimum": 0 },
+        "memo": { "type": "string" },
+        "other_detail": { "type": "string" }
+      },
+      "additionalProperties": true
+    }
+  }
+}
