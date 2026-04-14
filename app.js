@@ -1,13 +1,19 @@
 const DATA_URL = "docs/sample_itinerary_v0.json";
+const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
+const MAX_SHARE_DATA_CHARS = 60000;
 
 const state = {
   data: null,
   activeDayIndex: 0,
+  readOnly: false,
+  saveTimer: null,
+  toastTimer: null,
 };
 
 const VALIDATION_MESSAGES = {
   titleRequired: "タイトルは必須です",
   timezoneRequired: "タイムゾーンは必須です",
+  timezoneFormat: "タイムゾーンは Area/City 形式で入力してください",
   startDateFormat: "開始日は YYYY-MM-DD 形式で入力してください",
   dayStartFormat: "DayStart は HH:MM 形式で入力してください",
 };
@@ -29,9 +35,14 @@ const elements = {
   downloadJson: document.getElementById("download-json"),
   importJsonBtn: document.getElementById("import-json-btn"),
   importJsonInput: document.getElementById("import-json"),
+  shareUrl: document.getElementById("share-url"),
   pdfDayList: document.getElementById("pdf-day-list"),
   downloadPdf: document.getElementById("download-pdf"),
   pdfRoot: document.getElementById("pdf-root"),
+  saveStatus: document.getElementById("save-status"),
+  toast: document.getElementById("toast"),
+  readonlyBanner: document.getElementById("readonly-banner"),
+  loadingSkeleton: document.getElementById("loading-skeleton"),
 };
 
 function createInput(value = "") {
@@ -69,6 +80,79 @@ function isValidDate(value) {
   );
 }
 
+function isValidTimezone(value) {
+  return /^[A-Za-z][A-Za-z0-9_+\-]*(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
+}
+
+function showToast(message) {
+  if (!elements.toast) return;
+  elements.toast.textContent = message;
+  elements.toast.hidden = false;
+  clearTimeout(state.toastTimer);
+  state.toastTimer = setTimeout(() => {
+    elements.toast.hidden = true;
+  }, 2400);
+}
+
+function setSaveStatus(message) {
+  if (!elements.saveStatus) return;
+  elements.saveStatus.textContent = message;
+}
+
+function toBase64Url(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function setReadOnlyMode(readOnly) {
+  state.readOnly = readOnly;
+  if (elements.readonlyBanner) elements.readonlyBanner.hidden = !readOnly;
+
+  const editTargets = [
+    elements.tripTitle,
+    elements.tripTimezone,
+    elements.tripStartDate,
+    elements.tripDayStart,
+    elements.addDay,
+    elements.removeDay,
+    elements.addRow,
+    elements.importJsonBtn,
+    elements.importJsonInput,
+  ];
+  editTargets.forEach((el) => {
+    if (!el) return;
+    el.disabled = readOnly;
+  });
+}
+
+function scheduleAutosave() {
+  if (state.readOnly || !state.data) return;
+  setSaveStatus("保存中...");
+  clearTimeout(state.saveTimer);
+  state.saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
+      const timeText = new Date().toLocaleTimeString("ja-JP", { hour12: false });
+      setSaveStatus(`自動保存済み（${timeText}）`);
+    } catch (error) {
+      setSaveStatus("自動保存に失敗しました");
+    }
+  }, 320);
+}
+
 function addDays(dateText, days) {
   const [year, month, day] = dateText.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
@@ -86,8 +170,10 @@ function timeToMinutes(value) {
 
 function setValidity(input, ok, message = "") {
   input.classList.remove("invalid", "valid");
+  input.removeAttribute("aria-invalid");
   if (ok === null) return;
   input.classList.add(ok ? "valid" : "invalid");
+  if (!ok) input.setAttribute("aria-invalid", "true");
   input.title = message;
 }
 
@@ -125,7 +211,9 @@ function validateTripMeta() {
   const dayStart = (trip.day_start ?? "").trim();
 
   const titleOk = title.length > 0;
-  const timezoneOk = timezone.length > 0;
+  const timezoneRequiredOk = timezone.length > 0;
+  const timezoneFormatOk = timezoneRequiredOk ? isValidTimezone(timezone) : false;
+  const timezoneOk = timezoneRequiredOk && timezoneFormatOk;
   const startDateOk = isValidDate(startDate);
   const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
 
@@ -137,7 +225,9 @@ function validateTripMeta() {
   setValidity(
     elements.tripTimezone,
     timezoneOk,
-    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+    timezoneRequiredOk
+      ? (timezoneFormatOk ? "" : VALIDATION_MESSAGES.timezoneFormat)
+      : VALIDATION_MESSAGES.timezoneRequired
   );
   setValidity(
     elements.tripStartDate,
@@ -157,7 +247,9 @@ function validateTripMeta() {
   );
   setFieldError(
     elements.tripTimezoneError,
-    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+    timezoneRequiredOk
+      ? (timezoneFormatOk ? "" : VALIDATION_MESSAGES.timezoneFormat)
+      : VALIDATION_MESSAGES.timezoneRequired
   );
   setFieldError(
     elements.tripStartDateError,
@@ -184,11 +276,24 @@ function renderTabs(days) {
   days.forEach((day, index) => {
     const button = document.createElement("button");
     button.className = "tab";
+    button.type = "button";
+    button.setAttribute("role", "tab");
+    button.setAttribute("aria-selected", index === state.activeDayIndex ? "true" : "false");
     if (index === state.activeDayIndex) button.classList.add("active");
     button.textContent = `Day ${day.day} (${day.date})`;
     button.addEventListener("click", () => {
       state.activeDayIndex = index;
       render();
+    });
+    button.addEventListener("keydown", (event) => {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault();
+      const diff = event.key === "ArrowRight" ? 1 : -1;
+      const nextIndex = (index + diff + days.length) % days.length;
+      state.activeDayIndex = nextIndex;
+      render();
+      const nextTab = elements.dayTabs.querySelectorAll(".tab")[nextIndex];
+      nextTab?.focus();
     });
     elements.dayTabs.appendChild(button);
   });
@@ -226,6 +331,9 @@ function createRow(item, rowIndex) {
   const transportInput = createInput(item.transport);
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
+  costInput.type = "number";
+  costInput.min = "0";
+  costInput.step = "1";
 
   titleInput.placeholder = "必須";
 
@@ -253,7 +361,10 @@ function createRow(item, rowIndex) {
   const deleteTd = document.createElement("td");
   const deleteBtn = document.createElement("button");
   deleteBtn.className = "delete-btn";
+  deleteBtn.type = "button";
   deleteBtn.textContent = "削除";
+  deleteBtn.setAttribute("aria-label", `${rowIndex + 1}行目を削除`);
+  deleteBtn.disabled = state.readOnly;
   deleteBtn.addEventListener("click", () => deleteRow(rowIndex));
   deleteTd.appendChild(deleteBtn);
   tr.appendChild(deleteTd);
@@ -262,9 +373,11 @@ function createRow(item, rowIndex) {
     const start = startInput.value.trim();
     const end = endInput.value.trim();
     const title = titleInput.value.trim();
+    const costRaw = costInput.value.trim();
 
     const startValid = start === "" ? true : isValidTime(start);
     const endValid = end === "" ? true : isValidTime(end);
+    const costValid = costRaw === "" ? true : (/^\d+$/.test(costRaw) && Number(costRaw) >= 0);
 
     setValidity(
       startInput,
@@ -291,6 +404,12 @@ function createRow(item, rowIndex) {
       titleOk,
       titleOk ? "" : "Title は必須です"
     );
+
+    setValidity(
+      costInput,
+      costRaw === "" ? null : costValid,
+      costValid ? "" : "Cost は 0 以上の整数で入力してください"
+    );
   }
 
   startInput.addEventListener("input", () => {
@@ -312,8 +431,22 @@ function createRow(item, rowIndex) {
   kindInput.addEventListener("input", () => updateItem(rowIndex, "kind", kindInput.value));
   categoryInput.addEventListener("input", () => updateItem(rowIndex, "category", categoryInput.value));
   transportInput.addEventListener("input", () => updateItem(rowIndex, "transport", transportInput.value));
-  costInput.addEventListener("input", () => updateItem(rowIndex, "cost", Number(costInput.value)));
+  costInput.addEventListener("input", () => {
+    const raw = costInput.value.trim();
+    if (raw === "") {
+      updateItem(rowIndex, "cost", "");
+    } else if (/^\d+$/.test(raw)) {
+      updateItem(rowIndex, "cost", Number(raw));
+    }
+    validateRow();
+  });
   memoInput.addEventListener("input", () => updateItem(rowIndex, "memo", memoInput.value));
+
+  if (state.readOnly) {
+    cells.forEach((el) => {
+      el.disabled = true;
+    });
+  }
 
   validateRow();
   return tr;
@@ -329,6 +462,7 @@ function renderTable(day) {
 }
 
 function updateItem(index, key, value) {
+  if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   if (!day?.items[index]) return;
 
@@ -337,9 +471,11 @@ function updateItem(index, key, value) {
   } else {
     day.items[index][key] = value;
   }
+  scheduleAutosave();
 }
 
 function addRow() {
+  if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   if (!day.items) day.items = [];
 
@@ -356,10 +492,12 @@ function addRow() {
   };
 
   day.items.push(newItem);
+  scheduleAutosave();
   render();
 }
 
 function addDay() {
+  if (state.readOnly) return;
   const trip = state.data?.trip;
   if (!trip) return;
 
@@ -372,10 +510,12 @@ function addDay() {
   });
   normalizeDays();
   state.activeDayIndex = trip.days.length - 1;
+  scheduleAutosave();
   render();
 }
 
 function removeDay() {
+  if (state.readOnly) return;
   const trip = state.data?.trip;
   if (!trip?.days || trip.days.length <= 1) {
     alert("最後のDayは削除できません。");
@@ -387,12 +527,15 @@ function removeDay() {
     state.activeDayIndex = trip.days.length - 1;
   }
   normalizeDays();
+  scheduleAutosave();
   render();
 }
 
 function deleteRow(index) {
+  if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   day.items.splice(index, 1);
+  scheduleAutosave();
   render();
 }
 
@@ -407,30 +550,43 @@ function downloadJson() {
   a.download = "itinerary.json";
   a.click();
   URL.revokeObjectURL(url);
+  setSaveStatus("JSONを書き出しました");
+  showToast("JSON保存を開始しました");
 }
 
 function validateImportedData(data) {
-  return (
-    data &&
-    typeof data === "object" &&
-    data.trip &&
-    Array.isArray(data.trip.days)
-  );
+  if (!data || typeof data !== "object") return "JSONオブジェクトではありません。";
+  if (!data.trip || typeof data.trip !== "object") return "trip オブジェクトが必要です。";
+  if (!Array.isArray(data.trip.days)) return "trip.days 配列が必要です。";
+  if (typeof data.trip.title !== "string" || data.trip.title.trim() === "") {
+    return "trip.title は必須です。";
+  }
+  if (typeof data.trip.timezone !== "string" || !isValidTimezone(data.trip.timezone.trim())) {
+    return "trip.timezone は Area/City 形式で入力してください。";
+  }
+  if (typeof data.trip.start_date !== "string" || !isValidDate(data.trip.start_date.trim())) {
+    return "trip.start_date は YYYY-MM-DD 形式で入力してください。";
+  }
+  return "";
 }
 
 function handleImportJson(file) {
+  if (state.readOnly) return;
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     try {
       const data = JSON.parse(reader.result);
-      if (!validateImportedData(data)) {
-        alert("JSONの形式が不正です（trip.days が必要です）。");
+      const validationError = validateImportedData(data);
+      if (validationError) {
+        alert(`JSONの形式が不正です: ${validationError}`);
         return;
       }
       state.data = data;
       normalizeDays();
       state.activeDayIndex = 0;
+      scheduleAutosave();
+      showToast("JSONを読み込みました");
       render();
     } catch (err) {
       alert("JSONの解析に失敗しました。");
@@ -444,6 +600,26 @@ function getSelectedDayIndexes() {
   return Array.from(checkboxes)
     .filter((el) => el.checked)
     .map((el) => Number(el.dataset.dayIndex));
+}
+
+async function copyShareUrl() {
+  if (!state.data) return;
+  const jsonText = JSON.stringify(state.data);
+  const encoded = toBase64Url(jsonText);
+  if (encoded.length > MAX_SHARE_DATA_CHARS) {
+    showToast("データサイズが大きいため共有URLを作成できません");
+    return;
+  }
+  const url = new URL(window.location.href);
+  url.searchParams.set("data", encoded);
+  url.searchParams.set("readonly", "1");
+  const shareText = url.toString();
+  try {
+    await navigator.clipboard.writeText(shareText);
+    showToast("共有URLをコピーしました（閲覧専用）");
+  } catch (error) {
+    window.prompt("このURLをコピーしてください", shareText);
+  }
 }
 
 function buildTimeline(items) {
@@ -611,25 +787,65 @@ function render() {
   renderTabs(trip.days);
   renderPdfDayList(trip.days);
   renderTable(trip.days[state.activeDayIndex]);
-  elements.removeDay.disabled = trip.days.length <= 1;
+  elements.removeDay.disabled = state.readOnly || trip.days.length <= 1;
 }
 
 async function init() {
+  document.body.classList.add("loading");
   try {
-    const response = await fetch(DATA_URL);
-    if (!response.ok) throw new Error("Failed to load JSON");
-    const data = await response.json();
+    const params = new URLSearchParams(window.location.search);
+    const readonlyParam = params.get("readonly");
+    setReadOnlyMode(readonlyParam === "1" || readonlyParam === "true");
+
+    const sharedData = params.get("data");
+    let data = null;
+    if (sharedData) {
+      try {
+        const decoded = fromBase64Url(sharedData);
+        const parsed = JSON.parse(decoded);
+        const validationError = validateImportedData(parsed);
+        if (validationError) {
+          throw new Error(validationError);
+        }
+        data = parsed;
+        setSaveStatus("共有URLから読み込みました");
+      } catch (error) {
+        showToast("共有URLデータを読み込めませんでした");
+      }
+    } else if (!state.readOnly) {
+      try {
+        const cached = localStorage.getItem(STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          const validationError = validateImportedData(parsed);
+          if (!validationError) {
+            data = parsed;
+            setSaveStatus("自動保存データを復元しました");
+          }
+        }
+      } catch (error) {
+        // 読み込み不能なキャッシュは無視してサンプルデータへフォールバック
+      }
+    }
+
+    if (!data) {
+      const response = await fetch(DATA_URL);
+      if (!response.ok) throw new Error("Failed to load JSON");
+      data = await response.json();
+      setSaveStatus("サンプルデータを読み込みました");
+    }
     state.data = data;
     normalizeDays();
 
     const onTripMetaInput = () => {
+      if (state.readOnly) return;
       const trip = state.data?.trip;
       if (!trip) return;
 
       const prevStartDate = trip.start_date ?? "";
-      trip.title = elements.tripTitle.value;
-      trip.timezone = elements.tripTimezone.value;
-      trip.start_date = elements.tripStartDate.value;
+      trip.title = elements.tripTitle.value.trim();
+      trip.timezone = elements.tripTimezone.value.trim();
+      trip.start_date = elements.tripStartDate.value.trim();
       const dayStartValue = elements.tripDayStart.value;
       if (dayStartValue === "") {
         delete trip.day_start;
@@ -644,8 +860,14 @@ async function init() {
         renderPdfDayList(trip.days);
       }
       validateTripMeta();
+      scheduleAutosave();
     };
 
+    elements.dayTabs.setAttribute("role", "tablist");
+    elements.tripTitle.setAttribute("aria-describedby", "trip-title-error");
+    elements.tripTimezone.setAttribute("aria-describedby", "trip-timezone-error");
+    elements.tripStartDate.setAttribute("aria-describedby", "trip-start-date-error");
+    elements.tripDayStart.setAttribute("aria-describedby", "trip-day-start-error");
     elements.tripTitle.addEventListener("input", onTripMetaInput);
     elements.tripTimezone.addEventListener("input", onTripMetaInput);
     elements.tripStartDate.addEventListener("input", onTripMetaInput);
@@ -660,12 +882,21 @@ async function init() {
       handleImportJson(file);
       event.target.value = "";
     });
+    elements.shareUrl.addEventListener("click", copyShareUrl);
     elements.downloadPdf.addEventListener("click", exportPdf);
 
     render();
+    if (state.readOnly) {
+      setSaveStatus("閲覧専用モード");
+    } else if (!localStorage.getItem(STORAGE_KEY)) {
+      scheduleAutosave();
+    }
   } catch (error) {
     console.error(error);
     elements.tableBody.innerHTML = "<tr><td colspan=\"13\">JSON読み込みに失敗しました</td></tr>";
+    setSaveStatus("読み込みに失敗しました");
+  } finally {
+    document.body.classList.remove("loading");
   }
 }
 

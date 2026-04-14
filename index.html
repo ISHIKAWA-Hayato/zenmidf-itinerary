@@ -7,11 +7,25 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
   <div class="app">
     <header class="app-header">
       <h1>zenmidf-itinerary</h1>
       <p class="subtitle">MVP: 1d1p タブ切替 行程表 UI</p>
+      <p id="readonly-banner" class="readonly-banner" hidden>閲覧専用モードです（編集はできません）</p>
+      <p id="save-status" class="save-status" role="status" aria-live="polite" aria-atomic="true">読込中...</p>
     </header>
+
+    <section id="loading-skeleton" class="loading-skeleton" aria-hidden="true">
+      <div class="skeleton-block"></div>
+      <div class="skeleton-block"></div>
+      <div class="skeleton-grid">
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+        <div class="skeleton-line"></div>
+      </div>
+    </section>
 
     <section class="trip-meta">
       <label class="trip-meta-field">
@@ -55,25 +69,27 @@
         <button id="add-row" type="button">+ 行を追加</button>
         <button id="download-json" type="button">JSON保存</button>
         <button id="import-json-btn" type="button">JSON読込</button>
+        <button id="share-url" type="button">共有URLをコピー</button>
         <input id="import-json" type="file" accept="application/json" hidden />
       </div>
       <div class="table-wrap">
         <table id="itinerary-table">
+          <caption class="sr-only">日ごとの行程編集テーブル</caption>
           <thead>
             <tr>
-              <th>Start</th>
-              <th>End</th>
-              <th>Type</th>
-              <th>Title</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Location</th>
-              <th>Kind</th>
-              <th>Category</th>
-              <th>Transport</th>
-              <th>Cost</th>
-              <th>Memo</th>
-              <th></th>
+              <th scope="col">Start</th>
+              <th scope="col">End</th>
+              <th scope="col">Type</th>
+              <th scope="col">Title</th>
+              <th scope="col">From</th>
+              <th scope="col">To</th>
+              <th scope="col">Location</th>
+              <th scope="col">Kind</th>
+              <th scope="col">Category</th>
+              <th scope="col">Transport</th>
+              <th scope="col">Cost</th>
+              <th scope="col">Memo</th>
+              <th scope="col"></th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>
