@@ -345,7 +345,7 @@ function createRow(item, rowIndex) {
   const transportInput = createInput(item.transport);
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
-  // type=number は指数表記を許容するため、整数制約を優先して text + pattern を利用
+  // type=number は指数表記を許容するため、整数制約を実現する目的で text + pattern を利用
   costInput.type = "text";
   costInput.inputMode = "numeric";
   costInput.pattern = "\\d+";
@@ -826,7 +826,7 @@ async function init() {
         data = parsed;
         setSaveStatus("共有URLから読み込みました");
       } catch (error) {
-        showToast("共有URLデータを読み込めませんでした");
+        showToast(`共有URLデータを読み込めませんでした: ${error.message}`);
       }
     } else if (!state.readOnly) {
       try {
@@ -840,7 +840,7 @@ async function init() {
           }
         }
       } catch (error) {
-        showToast("自動保存データの復元に失敗したため、サンプルデータを読み込みます");
+        showToast("自動保存データの復元に失敗しました");
       }
     }
 
