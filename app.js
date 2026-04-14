@@ -5,6 +5,13 @@ const state = {
   activeDayIndex: 0,
 };
 
+const VALIDATION_MESSAGES = {
+  titleRequired: "タイトルは必須です",
+  timezoneRequired: "タイムゾーンは必須です",
+  startDateFormat: "開始日は YYYY-MM-DD 形式で入力してください",
+  dayStartFormat: "DayStart は HH:MM 形式で入力してください",
+};
+
 const elements = {
   tripTitle: document.getElementById("trip-title"),
   tripTitleError: document.getElementById("trip-title-error"),
@@ -109,8 +116,6 @@ function normalizeDays() {
 }
 
 function validateTripMeta() {
-  const dateErrorMessage = "開始日は YYYY-MM-DD 形式で入力してください";
-  const dayStartErrorMessage = "DayStart は HH:MM 形式で入力してください";
   const trip = state.data?.trip;
   if (!trip) return true;
 
@@ -124,22 +129,43 @@ function validateTripMeta() {
   const startDateOk = isValidDate(startDate);
   const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
 
-  setValidity(elements.tripTitle, titleOk, titleOk ? "" : "タイトルは必須です");
-  setValidity(elements.tripTimezone, timezoneOk, timezoneOk ? "" : "タイムゾーンは必須です");
-  setValidity(elements.tripStartDate, startDateOk, startDateOk ? "" : dateErrorMessage);
+  setValidity(
+    elements.tripTitle,
+    titleOk,
+    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+  );
+  setValidity(
+    elements.tripTimezone,
+    timezoneOk,
+    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+  );
+  setValidity(
+    elements.tripStartDate,
+    startDateOk,
+    startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
+  );
   // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
   setValidity(
     elements.tripDayStart,
     dayStart === "" ? null : dayStartOk,
-    dayStartOk ? "" : dayStartErrorMessage
+    dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
   );
 
-  setFieldError(elements.tripTitleError, titleOk ? "" : "タイトルは必須です");
-  setFieldError(elements.tripTimezoneError, timezoneOk ? "" : "タイムゾーンは必須です");
-  setFieldError(elements.tripStartDateError, startDateOk ? "" : dateErrorMessage);
+  setFieldError(
+    elements.tripTitleError,
+    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+  );
+  setFieldError(
+    elements.tripTimezoneError,
+    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+  );
+  setFieldError(
+    elements.tripStartDateError,
+    startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
+  );
   setFieldError(
     elements.tripDayStartError,
-    dayStart === "" || dayStartOk ? "" : dayStartErrorMessage
+    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
   );
 
   return titleOk && timezoneOk && startDateOk && dayStartOk;
