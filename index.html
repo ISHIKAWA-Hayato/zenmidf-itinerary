@@ -22,6 +22,12 @@
 
     <section class="tabs" id="day-tabs"></section>
 
+    <section class="pdf-controls">
+      <div class="pdf-controls__label">PDF出力（日選択）</div>
+      <div id="pdf-day-list" class="pdf-day-list"></div>
+      <button id="download-pdf" type="button">PDF出力</button>
+    </section>
+
     <section class="table-section">
       <div class="table-actions">
         <button id="add-row" type="button">+ 行を追加</button>
@@ -58,6 +64,10 @@
     </footer>
   </div>
 
+  <!-- PDF用に一時生成するDOM -->
+  <div id="pdf-root" class="pdf-root" aria-hidden="true"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="app.js" defer></script>
 </body>
 </html>
