@@ -49,11 +49,28 @@ body {
   gap: 8px 12px;
 }
 
+.trip-meta-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.field-error {
+  color: var(--danger);
+  font-size: 11px;
+  min-height: 1em;
+}
+
+.day-tabs-section {
+  margin: 16px 0;
+}
+
 .tabs {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-  margin: 16px 0;
+  margin: 0 0 8px;
 }
 
 .tab {
@@ -69,6 +86,29 @@ body {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
+}
+
+.day-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.day-actions button {
+  border: none;
+  color: #fff;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#add-day {
+  background: #0284c7;
+}
+
+#remove-day {
+  background: #dc2626;
 }
 
 .pdf-controls {

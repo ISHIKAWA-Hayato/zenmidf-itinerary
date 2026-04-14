@@ -5,12 +5,25 @@ const state = {
   activeDayIndex: 0,
 };
 
+const VALIDATION_MESSAGES = {
+  titleRequired: "タイトルは必須です",
+  timezoneRequired: "タイムゾーンは必須です",
+  startDateFormat: "開始日は YYYY-MM-DD 形式で入力してください",
+  dayStartFormat: "DayStart は HH:MM 形式で入力してください",
+};
+
 const elements = {
   tripTitle: document.getElementById("trip-title"),
+  tripTitleError: document.getElementById("trip-title-error"),
   tripTimezone: document.getElementById("trip-timezone"),
+  tripTimezoneError: document.getElementById("trip-timezone-error"),
   tripStartDate: document.getElementById("trip-start-date"),
+  tripStartDateError: document.getElementById("trip-start-date-error"),
   tripDayStart: document.getElementById("trip-day-start"),
+  tripDayStartError: document.getElementById("trip-day-start-error"),
   dayTabs: document.getElementById("day-tabs"),
+  addDay: document.getElementById("add-day"),
+  removeDay: document.getElementById("remove-day"),
   tableBody: document.getElementById("table-body"),
   addRow: document.getElementById("add-row"),
   downloadJson: document.getElementById("download-json"),
@@ -45,6 +58,27 @@ function isValidTime(value) {
   return /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
 }
 
+function isValidDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() + 1 === month &&
+    date.getUTCDate() === day
+  );
+}
+
+function addDays(dateText, days) {
+  const [year, month, day] = dateText.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
+  const yyyy = String(date.getUTCFullYear());
+  const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function timeToMinutes(value) {
   const [h, m] = value.split(":").map(Number);
   return h * 60 + m;
@@ -57,11 +91,92 @@ function setValidity(input, ok, message = "") {
   input.title = message;
 }
 
+function setFieldError(element, message = "") {
+  if (!element) return;
+  element.textContent = message;
+}
+
+function normalizeDays() {
+  const trip = state.data?.trip;
+  if (!trip) return;
+  if (!Array.isArray(trip.days)) trip.days = [];
+
+  const startDate = trip.start_date;
+  const canAutoDate = isValidDate(startDate);
+
+  trip.days.forEach((day, index) => {
+    day.day = index + 1;
+    if (canAutoDate) {
+      day.date = addDays(startDate, index);
+    } else if (typeof day.date !== "string") {
+      day.date = "";
+    }
+    if (!Array.isArray(day.items)) day.items = [];
+  });
+}
+
+function validateTripMeta() {
+  const trip = state.data?.trip;
+  if (!trip) return true;
+
+  const title = (trip.title ?? "").trim();
+  const timezone = (trip.timezone ?? "").trim();
+  const startDate = (trip.start_date ?? "").trim();
+  const dayStart = (trip.day_start ?? "").trim();
+
+  const titleOk = title.length > 0;
+  const timezoneOk = timezone.length > 0;
+  const startDateOk = isValidDate(startDate);
+  const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
+
+  setValidity(
+    elements.tripTitle,
+    titleOk,
+    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+  );
+  setValidity(
+    elements.tripTimezone,
+    timezoneOk,
+    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+  );
+  setValidity(
+    elements.tripStartDate,
+    startDateOk,
+    startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
+  );
+  // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
+  setValidity(
+    elements.tripDayStart,
+    dayStart === "" ? null : dayStartOk,
+    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
+  );
+
+  setFieldError(
+    elements.tripTitleError,
+    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+  );
+  setFieldError(
+    elements.tripTimezoneError,
+    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneRequired
+  );
+  setFieldError(
+    elements.tripStartDateError,
+    startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
+  );
+  setFieldError(
+    elements.tripDayStartError,
+    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
+  );
+
+  return titleOk && timezoneOk && startDateOk && dayStartOk;
+}
+
 function renderTripMeta(trip) {
-  elements.tripTitle.textContent = trip.title ?? "-";
-  elements.tripTimezone.textContent = trip.timezone ?? "-";
-  elements.tripStartDate.textContent = trip.start_date ?? "-";
-  elements.tripDayStart.textContent = trip.day_start ?? "-";
+  elements.tripTitle.value = trip.title ?? "";
+  elements.tripTimezone.value = trip.timezone ?? "";
+  elements.tripStartDate.value = trip.start_date ?? "";
+  elements.tripDayStart.value = trip.day_start ?? "";
+  validateTripMeta();
 }
 
 function renderTabs(days) {
@@ -244,6 +359,37 @@ function addRow() {
   render();
 }
 
+function addDay() {
+  const trip = state.data?.trip;
+  if (!trip) return;
+
+  if (!Array.isArray(trip.days)) trip.days = [];
+  trip.days.push({
+    day: trip.days.length + 1,
+    date: "",
+    notes: "",
+    items: [],
+  });
+  normalizeDays();
+  state.activeDayIndex = trip.days.length - 1;
+  render();
+}
+
+function removeDay() {
+  const trip = state.data?.trip;
+  if (!trip?.days || trip.days.length <= 1) {
+    alert("最後のDayは削除できません。");
+    return;
+  }
+
+  trip.days.splice(state.activeDayIndex, 1);
+  if (state.activeDayIndex >= trip.days.length) {
+    state.activeDayIndex = trip.days.length - 1;
+  }
+  normalizeDays();
+  render();
+}
+
 function deleteRow(index) {
   const day = state.data.trip.days[state.activeDayIndex];
   day.items.splice(index, 1);
@@ -283,6 +429,7 @@ function handleImportJson(file) {
         return;
       }
       state.data = data;
+      normalizeDays();
       state.activeDayIndex = 0;
       render();
     } catch (err) {
@@ -458,11 +605,13 @@ async function exportPdf() {
 function render() {
   if (!state.data?.trip) return;
   const trip = state.data.trip;
+  normalizeDays();
 
   renderTripMeta(trip);
   renderTabs(trip.days);
   renderPdfDayList(trip.days);
   renderTable(trip.days[state.activeDayIndex]);
+  elements.removeDay.disabled = trip.days.length <= 1;
 }
 
 async function init() {
@@ -471,7 +620,38 @@ async function init() {
     if (!response.ok) throw new Error("Failed to load JSON");
     const data = await response.json();
     state.data = data;
+    normalizeDays();
 
+    const onTripMetaInput = () => {
+      const trip = state.data?.trip;
+      if (!trip) return;
+
+      const prevStartDate = trip.start_date ?? "";
+      trip.title = elements.tripTitle.value;
+      trip.timezone = elements.tripTimezone.value;
+      trip.start_date = elements.tripStartDate.value;
+      const dayStartValue = elements.tripDayStart.value;
+      if (dayStartValue === "") {
+        delete trip.day_start;
+      } else if (isValidTime(dayStartValue)) {
+        trip.day_start = dayStartValue;
+      } else {
+        delete trip.day_start;
+      }
+      if (trip.start_date !== prevStartDate && isValidDate(trip.start_date)) {
+        normalizeDays();
+        renderTabs(trip.days);
+        renderPdfDayList(trip.days);
+      }
+      validateTripMeta();
+    };
+
+    elements.tripTitle.addEventListener("input", onTripMetaInput);
+    elements.tripTimezone.addEventListener("input", onTripMetaInput);
+    elements.tripStartDate.addEventListener("input", onTripMetaInput);
+    elements.tripDayStart.addEventListener("input", onTripMetaInput);
+    elements.addDay.addEventListener("click", addDay);
+    elements.removeDay.addEventListener("click", removeDay);
     elements.addRow.addEventListener("click", addRow);
     elements.downloadJson.addEventListener("click", downloadJson);
     elements.importJsonBtn.addEventListener("click", () => elements.importJsonInput.click());
