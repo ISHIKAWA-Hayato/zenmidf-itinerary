@@ -64,7 +64,8 @@ function isValidDate(value) {
 
 function addDays(dateText, days) {
   const [year, month, day] = dateText.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month - 1, day + days));
+  const date = new Date(Date.UTC(year, month - 1, day));
+  date.setUTCDate(date.getUTCDate() + days);
   const yyyy = String(date.getUTCFullYear());
   const mm = String(date.getUTCMonth() + 1).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
@@ -348,7 +349,7 @@ function addDay() {
 function removeDay() {
   const trip = state.data?.trip;
   if (!trip?.days || trip.days.length <= 1) {
-    alert("最低1つのDayが必要です。");
+    alert("削除できません。最後のDayは残す必要があります。");
     return;
   }
 
