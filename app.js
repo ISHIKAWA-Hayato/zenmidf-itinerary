@@ -2,7 +2,7 @@ const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
-// URLが極端に長くなるとブラウザや共有先で扱えないため、一般的なURL上限未満に制限
+// URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
 const state = {
@@ -85,6 +85,7 @@ function isValidDate(value) {
 }
 
 function isValidTimezone(value) {
+  // 例: Asia/Tokyo, America/New_York
   return /^[A-Za-z][A-Za-z0-9_+\-]*(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
 }
 
@@ -158,7 +159,7 @@ function scheduleAutosave() {
   state.saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      const timeText = new Date().toLocaleTimeString(navigator.language || DEFAULT_LOCALE, { hour12: false });
+      const timeText = new Date().toLocaleTimeString(navigator.language || DEFAULT_LOCALE);
       setSaveStatus(`自動保存済み（${timeText}）`);
     } catch (error) {
       setSaveStatus("自動保存に失敗しました");
@@ -344,6 +345,7 @@ function createRow(item, rowIndex) {
   const transportInput = createInput(item.transport);
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
+  // type=number は指数表記を許容するため、整数制約を優先して text + pattern を利用
   costInput.type = "text";
   costInput.inputMode = "numeric";
   costInput.pattern = "\\d+";
@@ -620,7 +622,7 @@ async function copyShareUrl() {
   const jsonText = JSON.stringify(state.data);
   const encoded = toBase64Url(jsonText);
   if (encoded.length > MAX_SHARE_DATA_CHARS) {
-    showToast("データサイズが大きいため共有URLを作成できません");
+    showToast(`データサイズが大きすぎます（${encoded.length}/${MAX_SHARE_DATA_CHARS} 文字）`);
     return;
   }
   const url = new URL(window.location.href);
@@ -838,7 +840,7 @@ async function init() {
           }
         }
       } catch (error) {
-        // 読み込み不能なキャッシュは無視してサンプルデータへフォールバック
+        showToast("自動保存データの復元に失敗したため、サンプルデータを読み込みます");
       }
     }
 

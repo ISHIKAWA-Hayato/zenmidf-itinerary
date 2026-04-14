@@ -2,6 +2,7 @@
   color-scheme: light;
   --bg: #f3f6f8;
   --card: #ffffff;
+  /* コントラスト改善（可読性/アクセシビリティ向上） */
   --text: #111827;
   --muted: #374151;
   --primary: #0f766e;
