@@ -1,5 +1,6 @@
 const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
+// URLが極端に長くなるとブラウザや共有先で扱えないため上限を設ける
 const MAX_SHARE_DATA_CHARS = 60000;
 
 const state = {
@@ -114,7 +115,11 @@ function fromBase64Url(value) {
   const binary = atob(padded);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-  return new TextDecoder().decode(bytes);
+  try {
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    throw new Error("共有データのデコードに失敗しました");
+  }
 }
 
 function setReadOnlyMode(readOnly) {
@@ -145,7 +150,7 @@ function scheduleAutosave() {
   state.saveTimer = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
-      const timeText = new Date().toLocaleTimeString("ja-JP", { hour12: false });
+      const timeText = new Date().toLocaleTimeString(navigator.language || "ja-JP", { hour12: false });
       setSaveStatus(`自動保存済み（${timeText}）`);
     } catch (error) {
       setSaveStatus("自動保存に失敗しました");
@@ -331,9 +336,9 @@ function createRow(item, rowIndex) {
   const transportInput = createInput(item.transport);
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
-  costInput.type = "number";
-  costInput.min = "0";
-  costInput.step = "1";
+  costInput.type = "text";
+  costInput.inputMode = "numeric";
+  costInput.pattern = "\\d*";
 
   titleInput.placeholder = "必須";
 
@@ -377,7 +382,7 @@ function createRow(item, rowIndex) {
 
     const startValid = start === "" ? true : isValidTime(start);
     const endValid = end === "" ? true : isValidTime(end);
-    const costValid = costRaw === "" ? true : (/^\d+$/.test(costRaw) && Number(costRaw) >= 0);
+    const costValid = costRaw === "" ? true : /^\d+$/.test(costRaw);
 
     setValidity(
       startInput,
@@ -618,7 +623,8 @@ async function copyShareUrl() {
     await navigator.clipboard.writeText(shareText);
     showToast("共有URLをコピーしました（閲覧専用）");
   } catch (error) {
-    window.prompt("このURLをコピーしてください", shareText);
+    showToast("クリップボードが使えないためダイアログからURLをコピーしてください");
+    window.prompt("共有URL（Ctrl/Cmd+C でコピー）", shareText);
   }
 }
 
