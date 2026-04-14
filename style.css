@@ -199,20 +199,22 @@ body {
 
 /* PDF用 */
 .pdf-root {
-  display: none;
-  position: fixed;
-  inset: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 210mm;
   background: #fff;
+  visibility: hidden; /* デフォルトは非表示 */
+  pointer-events: none;
   z-index: 9999;
 }
 
 .pdf-exporting .pdf-root {
-  display: block;
+  visibility: visible; /* 出力中だけ表示 */
 }
 
 .pdf-exporting .app {
-  visibility: hidden;
+  opacity: 0; /* ちらつき対策 */
 }
 
 .pdf-page {

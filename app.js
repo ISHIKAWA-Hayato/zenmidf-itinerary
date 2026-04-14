@@ -415,7 +415,10 @@ async function exportPdf() {
 
   document.body.classList.add("pdf-exporting");
 
-  // DOM描画を待つ
+  // フォント＆レイアウトの確定を待つ
+  if (document.fonts && document.fonts.ready) {
+    await document.fonts.ready;
+  }
   await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
   const filename = `itinerary_${trip.start_date ?? "trip"}.pdf`;
@@ -423,7 +426,7 @@ async function exportPdf() {
     margin: [10, 10, 10, 10],
     filename,
     image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2 },
+    html2canvas: { scale: 2, backgroundColor: "#ffffff" },
     jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     pagebreak: { mode: ["css", "legacy"] },
   };
