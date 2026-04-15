@@ -32,7 +32,6 @@
 - UIは表中心で、行の追加/複製/削除・セル直接編集を想定
 - UIテーマ（配色・余白・コンポーネント基調）は `style.css` の `:root` デザイントークンで管理
 - Tripメタ（title / timezone / start_date / day_start）はUIから編集可能
-- item.type / kind / category / transport は入力ミス防止のため選択式UIを利用
 - Dayの追加・削除に対応（start_date が有効な場合は day/date を自動再計算）
 - タイムラインはPDF出力時のみ自動生成
 - 編集内容はブラウザ `localStorage` に自動保存

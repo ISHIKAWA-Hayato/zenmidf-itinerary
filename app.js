@@ -2,7 +2,6 @@ const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
-const TIME_INPUT_STEP_SECONDS = 60;
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -20,43 +19,6 @@ const VALIDATION_MESSAGES = {
   timezoneFormat: "タイムゾーンは Area/City 形式で入力してください",
   startDateFormat: "開始日は YYYY-MM-DD 形式で入力してください",
   dayStartFormat: "DayStart は HH:MM 形式で入力してください",
-};
-
-const ITEM_OPTIONS = {
-  type: ["move", "place", "do"],
-  transport: [
-    "train",
-    "local-bus",
-    "highway-bus",
-    "aircraft",
-    "ship",
-    "taxi",
-    "rent-a-car",
-    "on-foot",
-    "bicycle",
-    "other",
-  ],
-  kind: [
-    "station",
-    "bus-stop",
-    "airport",
-    "port",
-    "spot",
-    "hotel",
-    "restaurant",
-    "other",
-  ],
-  category: [
-    "transfer",
-    "visit",
-    "sight-seeing",
-    "food",
-    "stay",
-    "shopping",
-    "event",
-    "work",
-    "other",
-  ],
 };
 
 const elements = {
@@ -94,18 +56,13 @@ function createInput(value = "") {
   return input;
 }
 
-function createSelect(options, value = "", config = {}) {
-  const { includeEmpty = false, emptyLabel = "—" } = config;
+function createSelect(options, value = "") {
   const select = document.createElement("select");
   select.className = "input";
-  const values = includeEmpty ? ["", ...options] : [...options];
-  // 既存データに未知の値が入っていても編集時に消失しないよう、選択肢へ一時追加する
-  // （必要に応じて import 時に正規値への移行・補正を行う前提）
-  if (value && !values.includes(value)) values.push(value);
-  values.forEach((opt) => {
+  options.forEach((opt) => {
     const option = document.createElement("option");
     option.value = opt;
-    option.textContent = opt === "" ? emptyLabel : opt;
+    option.textContent = opt;
     if (opt === value) option.selected = true;
     select.appendChild(option);
   });
@@ -378,33 +335,16 @@ function createRow(item, rowIndex) {
 
   const startInput = createInput(item.start);
   const endInput = createInput(item.end);
-  const typeSelect = createSelect(ITEM_OPTIONS.type, item.type);
+  const typeSelect = createSelect(["move", "place", "do"], item.type);
   const titleInput = createInput(item.title);
   const fromInput = createInput(item.from);
   const toInput = createInput(item.to);
   const locationInput = createInput(item.location);
-  const kindSelect = createSelect(
-    ITEM_OPTIONS.kind,
-    item.kind ?? "",
-    { includeEmpty: true }
-  );
-  const categorySelect = createSelect(
-    ITEM_OPTIONS.category,
-    item.category ?? "",
-    { includeEmpty: true }
-  );
-  const transportSelect = createSelect(
-    ITEM_OPTIONS.transport,
-    item.transport ?? "",
-    { includeEmpty: true }
-  );
+  const kindInput = createInput(item.kind);
+  const categoryInput = createInput(item.category);
+  const transportInput = createInput(item.transport);
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
-  // 時刻は分単位で扱うため秒入力を抑止し、入力ミスを減らす
-  startInput.type = "time";
-  endInput.type = "time";
-  startInput.step = String(TIME_INPUT_STEP_SECONDS);
-  endInput.step = String(TIME_INPUT_STEP_SECONDS);
   // type=number は指数表記を許容するため、整数制約を実現する目的で text + pattern を利用
   costInput.type = "text";
   costInput.inputMode = "numeric";
@@ -420,9 +360,9 @@ function createRow(item, rowIndex) {
     fromInput,
     toInput,
     locationInput,
-    kindSelect,
-    categorySelect,
-    transportSelect,
+    kindInput,
+    categoryInput,
+    transportInput,
     costInput,
     memoInput,
   ];
@@ -487,19 +427,6 @@ function createRow(item, rowIndex) {
     );
   }
 
-  function applyTypeFieldState() {
-    if (state.readOnly) {
-      kindSelect.disabled = true;
-      categorySelect.disabled = true;
-      transportSelect.disabled = true;
-      return;
-    }
-    const type = typeSelect.value;
-    kindSelect.disabled = type !== "place";
-    categorySelect.disabled = type !== "do";
-    transportSelect.disabled = type !== "move";
-  }
-
   startInput.addEventListener("input", () => {
     updateItem(rowIndex, "start", startInput.value);
     validateRow();
@@ -508,10 +435,7 @@ function createRow(item, rowIndex) {
     updateItem(rowIndex, "end", endInput.value);
     validateRow();
   });
-  typeSelect.addEventListener("change", () => {
-    updateItem(rowIndex, "type", typeSelect.value);
-    applyTypeFieldState();
-  });
+  typeSelect.addEventListener("change", () => updateItem(rowIndex, "type", typeSelect.value));
   titleInput.addEventListener("input", () => {
     updateItem(rowIndex, "title", titleInput.value);
     validateRow();
@@ -519,9 +443,9 @@ function createRow(item, rowIndex) {
   fromInput.addEventListener("input", () => updateItem(rowIndex, "from", fromInput.value));
   toInput.addEventListener("input", () => updateItem(rowIndex, "to", toInput.value));
   locationInput.addEventListener("input", () => updateItem(rowIndex, "location", locationInput.value));
-  kindSelect.addEventListener("change", () => updateItem(rowIndex, "kind", kindSelect.value));
-  categorySelect.addEventListener("change", () => updateItem(rowIndex, "category", categorySelect.value));
-  transportSelect.addEventListener("change", () => updateItem(rowIndex, "transport", transportSelect.value));
+  kindInput.addEventListener("input", () => updateItem(rowIndex, "kind", kindInput.value));
+  categoryInput.addEventListener("input", () => updateItem(rowIndex, "category", categoryInput.value));
+  transportInput.addEventListener("input", () => updateItem(rowIndex, "transport", transportInput.value));
   costInput.addEventListener("input", () => {
     const raw = costInput.value.trim();
     if (raw === "") {
@@ -539,7 +463,6 @@ function createRow(item, rowIndex) {
     });
   }
 
-  applyTypeFieldState();
   validateRow();
   return tr;
 }
