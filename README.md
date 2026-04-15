@@ -34,6 +34,8 @@
 - Tripメタ（title / timezone / start_date / day_start）はUIから編集可能
 - Dayの追加・削除に対応（start_date が有効な場合は day/date を自動再計算）
 - タイムラインはPDF出力時のみ自動生成
+- 編集内容はブラウザ `localStorage` に自動保存
+- 共有URLは `data` クエリにJSONを含み、`readonly=1` で閲覧専用モード
 
 ## Issue
 - https://github.com/ISHIKAWA-Hayato/zenmidf-itinerary/issues
