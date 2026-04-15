@@ -98,6 +98,7 @@ function createSelect(options, value = "", config = {}) {
   const select = document.createElement("select");
   select.className = "input";
   const values = includeEmpty ? ["", ...options] : [...options];
+  // 既存データに未知の値が入っていても編集時に消失しないよう、選択肢へ一時追加する
   if (value && !values.includes(value)) values.push(value);
   values.forEach((opt) => {
     const option = document.createElement("option");
@@ -397,6 +398,7 @@ function createRow(item, rowIndex) {
   );
   const costInput = createInput(item.cost ?? "");
   const memoInput = createInput(item.memo);
+  // 時刻は分単位で扱うため秒入力を抑止し、入力ミスを減らす
   startInput.type = "time";
   endInput.type = "time";
   startInput.step = "60";
