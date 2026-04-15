@@ -2,6 +2,7 @@ const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
+const TIME_INPUT_STEP_SECONDS = 60;
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -99,6 +100,7 @@ function createSelect(options, value = "", config = {}) {
   select.className = "input";
   const values = includeEmpty ? ["", ...options] : [...options];
   // 既存データに未知の値が入っていても編集時に消失しないよう、選択肢へ一時追加する
+  // （必要に応じて import 時に正規値への移行・補正を行う前提）
   if (value && !values.includes(value)) values.push(value);
   values.forEach((opt) => {
     const option = document.createElement("option");
@@ -401,8 +403,8 @@ function createRow(item, rowIndex) {
   // 時刻は分単位で扱うため秒入力を抑止し、入力ミスを減らす
   startInput.type = "time";
   endInput.type = "time";
-  startInput.step = "60";
-  endInput.step = "60";
+  startInput.step = String(TIME_INPUT_STEP_SECONDS);
+  endInput.step = String(TIME_INPUT_STEP_SECONDS);
   // type=number は指数表記を許容するため、整数制約を実現する目的で text + pattern を利用
   costInput.type = "text";
   costInput.inputMode = "numeric";
