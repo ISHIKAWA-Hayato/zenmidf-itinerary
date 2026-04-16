@@ -4,6 +4,7 @@ const INPUT_MODE_STORAGE_KEY = "zenmidf-itinerary-input-mode-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
 const TIME_INPUT_STEP_SECONDS = "60";
+const MAX_HISTORY_LENGTH = 100;
 const INPUT_MODES = {
   DETAIL: "detail",
   SIMPLE: "simple",
@@ -79,7 +80,7 @@ const DETAIL_COLUMN_LABELS = {
   kind: "種別",
   category: "行先",
   cost: "運賃/費用",
-  transport: "Transport",
+  transport: "路線名など",
 };
 const COLUMN_LABELS = {
   start: "Start",
@@ -391,12 +392,18 @@ function updateHistoryButtons() {
 
 function pushHistorySnapshot() {
   if (!state.data || state.readOnly) return;
+  const serializedData = JSON.stringify(state.data);
   const snapshot = {
     data: cloneData(state.data),
     activeDayIndex: state.activeDayIndex,
+    serializedData,
   };
   const currentSnapshot = state.history[state.historyIndex];
-  if (currentSnapshot && JSON.stringify(currentSnapshot) === JSON.stringify(snapshot)) {
+  if (
+    currentSnapshot &&
+    currentSnapshot.activeDayIndex === snapshot.activeDayIndex &&
+    currentSnapshot.serializedData === snapshot.serializedData
+  ) {
     updateHistoryButtons();
     return;
   }
@@ -405,7 +412,7 @@ function pushHistorySnapshot() {
     state.history = state.history.slice(0, state.historyIndex + 1);
   }
   state.history.push(snapshot);
-  if (state.history.length > 100) {
+  if (state.history.length > MAX_HISTORY_LENGTH) {
     state.history.shift();
   }
   state.historyIndex = state.history.length - 1;
@@ -896,12 +903,12 @@ function deleteAllRows() {
   if (state.readOnly) return;
   const day = state.data?.trip?.days?.[state.activeDayIndex];
   if (!day?.rows || day.rows.length === 0) return;
-  if (!window.confirm("表示中のDayの行を全削除します。よろしいですか？")) return;
+  if (!window.confirm("表示中の日程の行を全削除します。よろしいですか？")) return;
   day.rows = [];
   pushHistorySnapshot();
   scheduleAutosave();
   render();
-  showToast("表示中Dayの行を全削除しました");
+  showToast("表示中の日程の行を全削除しました");
 }
 
 function downloadJson() {
