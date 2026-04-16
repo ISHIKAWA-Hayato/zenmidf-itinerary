@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>zenmidf-itinerary MVP</title>
-  <link rel="stylesheet" href="style.css?v=20260416b" />
+  <link rel="stylesheet" href="style.css?v=20260416c" />
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
@@ -27,6 +27,14 @@
       </div>
     </section>
 
+    <section class="input-mode-switch" aria-label="入力モード">
+      <span class="input-mode-switch__label">入力モード</span>
+      <div class="input-mode-switch__buttons" role="tablist" aria-label="入力モード切替">
+        <button id="input-mode-detail" class="tab" type="button" role="tab" aria-selected="true">詳細入力</button>
+        <button id="input-mode-simple" class="tab" type="button" role="tab" aria-selected="false">簡易入力</button>
+      </div>
+    </section>
+
     <section class="trip-meta">
       <label class="trip-meta-field">
         <span>タイトル</span>
@@ -43,7 +51,7 @@
         <input id="trip-start-date" class="input" type="date" />
         <small id="trip-start-date-error" class="field-error"></small>
       </label>
-      <label class="trip-meta-field">
+      <label id="trip-day-start-field" class="trip-meta-field">
         <span>DayStart</span>
         <input id="trip-day-start" class="input" type="time" />
         <small id="trip-day-start-error" class="field-error"></small>
@@ -77,19 +85,19 @@
           <caption id="itinerary-table-caption" class="sr-only">日ごとの行程編集テーブル</caption>
           <thead>
             <tr>
-              <th scope="col">Start</th>
-              <th scope="col">End</th>
-              <th scope="col">Type</th>
-              <th scope="col">Title</th>
-              <th scope="col">From</th>
-              <th scope="col">To</th>
-              <th scope="col">Location</th>
-              <th scope="col">Kind</th>
-              <th scope="col">Category</th>
-              <th scope="col">Transport</th>
-              <th scope="col">Cost</th>
-              <th scope="col">Memo</th>
-              <th scope="col"></th>
+              <th scope="col" data-col="start">Start</th>
+              <th scope="col" data-col="end">End</th>
+              <th scope="col" data-col="type">Type</th>
+              <th scope="col" data-col="title">Title</th>
+              <th scope="col" data-col="from">From</th>
+              <th scope="col" data-col="to">To</th>
+              <th scope="col" data-col="location">Location</th>
+              <th scope="col" data-col="kind">Kind</th>
+              <th scope="col" data-col="category">Category</th>
+              <th scope="col" data-col="transport">Transport</th>
+              <th scope="col" data-col="cost">Cost</th>
+              <th scope="col" data-col="memo">Memo</th>
+              <th scope="col" data-col="actions"></th>
             </tr>
           </thead>
           <tbody id="table-body"></tbody>
@@ -109,6 +117,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <script src="app.js?v=20260416b" defer></script>
+  <script src="app.js?v=20260416c" defer></script>
 </body>
 </html>
