@@ -654,18 +654,32 @@ function buildTimeline(items) {
   return sortable.map((entry) => entry.item);
 }
 
-function createPdfPage(day, trip) {
+function createPdfPage(day, trip, pageNumber, totalPages) {
   const page = document.createElement("section");
   page.className = "pdf-page";
 
   const header = document.createElement("div");
   header.className = "pdf-header";
-  header.innerHTML = `
-    <div class="pdf-title">${trip.title ?? "-"}</div>
-    <div class="pdf-subtitle">Day ${day.day} / ${day.date}</div>
-    <div class="pdf-meta">Timezone: ${trip.timezone ?? "-"} / DayStart: ${trip.day_start ?? "-"}</div>
-  `;
+  const title = document.createElement("div");
+  title.className = "pdf-title";
+  title.textContent = trip.title ?? "-";
+  header.appendChild(title);
+
+  const subtitle = document.createElement("div");
+  subtitle.className = "pdf-subtitle";
+  subtitle.textContent = `Day ${day.day} / ${day.date}`;
+  header.appendChild(subtitle);
+
+  const meta = document.createElement("div");
+  meta.className = "pdf-meta";
+  meta.textContent = `Timezone: ${trip.timezone ?? "-"} / DayStart: ${trip.day_start ?? "-"}`;
+  header.appendChild(meta);
   page.appendChild(header);
+
+  const tableTitle = document.createElement("div");
+  tableTitle.className = "pdf-section-title";
+  tableTitle.textContent = "Itinerary Details";
+  page.appendChild(tableTitle);
 
   const table = document.createElement("table");
   table.className = "pdf-table";
@@ -717,7 +731,7 @@ function createPdfPage(day, trip) {
   const timeline = document.createElement("div");
   timeline.className = "pdf-timeline";
   const timelineTitle = document.createElement("div");
-  timelineTitle.className = "pdf-timeline__title";
+  timelineTitle.className = "pdf-section-title pdf-timeline__title";
   timelineTitle.textContent = "Timeline";
   timeline.appendChild(timelineTitle);
 
@@ -732,6 +746,11 @@ function createPdfPage(day, trip) {
   timeline.appendChild(list);
   page.appendChild(timeline);
 
+  const footer = document.createElement("div");
+  footer.className = "pdf-footer";
+  footer.textContent = `zenmidf-itinerary | ${pageNumber} / ${totalPages}`;
+  page.appendChild(footer);
+
   return page;
 }
 
@@ -745,10 +764,12 @@ async function exportPdf() {
   }
 
   elements.pdfRoot.innerHTML = "";
+  const totalPages = selectedIndexes.length;
   selectedIndexes.forEach((index) => {
     const day = trip.days[index];
     if (!day) return;
-    elements.pdfRoot.appendChild(createPdfPage(day, trip));
+    const pageNumber = elements.pdfRoot.childElementCount + 1;
+    elements.pdfRoot.appendChild(createPdfPage(day, trip, pageNumber, totalPages));
   });
 
   document.body.classList.add("pdf-exporting");
@@ -771,6 +792,24 @@ async function exportPdf() {
       scale: 2,
       backgroundColor: "#ffffff",
       useCORS: true,
+      onclone: (clonedDoc) => {
+        const rootVars = clonedDoc.createElement("style");
+        rootVars.textContent = `:root {
+          --bg: #f3f6f8;
+          --card: #ffffff;
+          --text: #111827;
+          --muted: #374151;
+          --primary: #0f766e;
+          --primary-strong: #0d5f59;
+          --primary-soft: #e9f7f6;
+          --border: #dbe3ea;
+          --table-header: #eef3f6;
+          --danger: #dc2626;
+          --success: #16a34a;
+          --ring: rgba(15, 118, 110, 0.28);
+        }`;
+        clonedDoc.head.appendChild(rootVars);
+      },
     });
 
     let imgWidth = pageWidth;

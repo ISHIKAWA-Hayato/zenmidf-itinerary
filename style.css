@@ -422,61 +422,95 @@ button:focus-visible,
 .pdf-page {
   page-break-after: always;
   background: #fff;
-  padding: 8mm;
+  padding: 10mm;
   width: 210mm;
   min-height: 297mm;
   box-sizing: border-box;
+  color: #111827;
+  font-size: 11px;
+  line-height: 1.45;
 }
 
 .pdf-header {
-  margin-bottom: 8px;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #dbe3ea;
 }
 
 .pdf-title {
-  font-size: 18px;
+  font-size: 19px;
   font-weight: 700;
+  color: #0f766e;
+  letter-spacing: 0.01em;
 }
 
 .pdf-subtitle {
+  margin-top: 1px;
   font-size: 14px;
+  font-weight: 600;
   color: #374151;
 }
 
 .pdf-meta {
+  margin-top: 1px;
   font-size: 11px;
-  color: #6b7280;
+  color: #4b5563;
+}
+
+.pdf-section-title {
+  margin: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0d5f59;
 }
 
 .pdf-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 10px;
-  margin-top: 8px;
+  margin-top: 0;
+  table-layout: fixed;
 }
 
 .pdf-table th,
 .pdf-table td {
-  border: 1px solid #e5e7eb;
-  padding: 4px;
+  border: 1px solid #dbe3ea;
+  padding: 4px 3px;
+  vertical-align: top;
+  word-break: break-word;
 }
 
 .pdf-table th {
-  background: #f3f4f6;
+  background: #eef3f6;
+  color: #1f2937;
+  font-weight: 600;
+}
+
+.pdf-table tbody tr:nth-child(even) td {
+  background: #f9fbfc;
 }
 
 .pdf-timeline {
-  margin-top: 10px;
+  margin-top: 8px;
   font-size: 11px;
 }
 
 .pdf-timeline__title {
-  font-weight: 600;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .pdf-timeline__list {
-  padding-left: 16px;
+  padding-left: 18px;
   margin: 0;
+}
+
+.pdf-footer {
+  margin-top: 8px;
+  padding-top: 4px;
+  border-top: 1px solid #dbe3ea;
+  text-align: right;
+  color: #6b7280;
+  font-size: 10px;
 }
 
 @media (max-width: 720px) {
