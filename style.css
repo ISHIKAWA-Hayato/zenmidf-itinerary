@@ -175,7 +175,7 @@ body.loading .loading-skeleton {
 }
 
 .input-mode-switch__option:hover {
-  background: #fff;
+  background: var(--card);
 }
 
 .input-mode-switch__option.active {

@@ -3,6 +3,7 @@ const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const INPUT_MODE_STORAGE_KEY = "zenmidf-itinerary-input-mode-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
+const TIME_INPUT_STEP_SECONDS = "60";
 const INPUT_MODES = {
   DETAIL: "detail",
   SIMPLE: "simple",
@@ -168,6 +169,15 @@ function isValidDate(value) {
 function isValidTimezone(value) {
   // 例: Asia/Tokyo, America/New_York
   return /^[A-Za-z][A-Za-z0-9_+\-]*(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
+}
+
+function getTransportOrLocationKey(type) {
+  return type === "move" ? "transport" : "location";
+}
+
+function getTransportOrLocationValue(item, type = item?.type) {
+  const key = getTransportOrLocationKey(type);
+  return item?.[key] ?? "";
 }
 
 function showToast(message) {
@@ -493,18 +503,16 @@ function createRow(item, rowIndex) {
 
   const startInput = createInput(item.start);
   startInput.type = "time";
-  startInput.step = "60";
+  startInput.step = TIME_INPUT_STEP_SECONDS;
   const endInput = createInput(item.end);
   endInput.type = "time";
-  endInput.step = "60";
+  endInput.step = TIME_INPUT_STEP_SECONDS;
   const typeSelect = createSelect(["move", "place", "do"], item.type);
   const titleInput = createInput(item.title);
   const fromInput = createInput(item.from);
   const toInput = createInput(item.to);
-  const transportOrLocationValue = item.type === "move"
-    ? (item.transport ?? "")
-    : (item.location ?? "");
-  const locationInput = createInput(transportOrLocationValue);
+  const transportOrLocationValue = getTransportOrLocationValue(item);
+  const transportOrLocationInput = createInput(transportOrLocationValue);
   const kindInput = createInput(item.kind);
   const categoryInput = createInput(item.category);
   const transportInput = createInput(item.transport);
@@ -524,7 +532,7 @@ function createRow(item, rowIndex) {
     { key: "title", el: titleInput },
     { key: "from", el: fromInput },
     { key: "to", el: toInput },
-    { key: "location", el: locationInput },
+    { key: "location", el: transportOrLocationInput },
     { key: "kind", el: kindInput },
     { key: "category", el: categoryInput },
     { key: "transport", el: transportInput },
@@ -613,9 +621,9 @@ function createRow(item, rowIndex) {
   });
   fromInput.addEventListener("input", () => updateItem(rowIndex, "from", fromInput.value));
   toInput.addEventListener("input", () => updateItem(rowIndex, "to", toInput.value));
-  locationInput.addEventListener("input", () => {
-    const key = typeSelect.value === "move" ? "transport" : "location";
-    updateItem(rowIndex, key, locationInput.value);
+  transportOrLocationInput.addEventListener("input", () => {
+    const key = getTransportOrLocationKey(typeSelect.value);
+    updateItem(rowIndex, key, transportOrLocationInput.value);
   });
   kindInput.addEventListener("input", () => updateItem(rowIndex, "kind", kindInput.value));
   categoryInput.addEventListener("input", () => updateItem(rowIndex, "category", categoryInput.value));
@@ -635,10 +643,8 @@ function createRow(item, rowIndex) {
     updateItem(rowIndex, "type", typeSelect.value);
     const day = state.data?.trip?.days?.[state.activeDayIndex];
     const currentItem = day?.items?.[rowIndex];
-    const nextValue = typeSelect.value === "move"
-      ? (currentItem?.transport ?? "")
-      : (currentItem?.location ?? "");
-    locationInput.value = nextValue;
+    const nextValue = getTransportOrLocationValue(currentItem, typeSelect.value);
+    transportOrLocationInput.value = nextValue;
     validateRow();
   });
 
@@ -1046,6 +1052,7 @@ async function init() {
     } catch (error) {
       // localStorage が使えない環境では既定値を利用
     }
+    renderInputModeSwitch();
 
     const sharedData = params.get("data");
     let data = null;
