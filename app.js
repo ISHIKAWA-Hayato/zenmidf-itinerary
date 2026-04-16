@@ -1,4 +1,5 @@
 const DATA_URL = "docs/sample_itinerary_v0.json";
+const SCHEMA_VERSION = "0.2.0";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const INPUT_MODE_STORAGE_KEY = "zenmidf-itinerary-input-mode-v1";
 const DEFAULT_LOCALE = "ja-JP";
@@ -79,6 +80,20 @@ const DETAIL_COLUMN_LABELS = {
   category: "Destination",
   transport: "Transport",
 };
+const COLUMN_LABELS = {
+  start: "Start",
+  end: "End",
+  type: "Type",
+  title: "Title",
+  from: "From",
+  to: "To",
+  location: "Location",
+  kind: "Kind",
+  category: "Category",
+  transport: "Transport",
+  cost: "Cost",
+  memo: "Memo",
+};
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -90,6 +105,7 @@ const state = {
   saveTimer: null,
   toastTimer: null,
 };
+let itemIdSequence = 0;
 
 const VALIDATION_MESSAGES = {
   titleRequired: "タイトルは必須です",
@@ -249,8 +265,8 @@ function isSimpleInputMode() {
 
 function renderInputModeSwitch() {
   const modeButtons = [
-    [elements.inputModeDetail, INPUT_MODES.DETAIL],
     [elements.inputModeSimple, INPUT_MODES.SIMPLE],
+    [elements.inputModeDetail, INPUT_MODES.DETAIL],
   ];
   modeButtons.forEach(([button, mode]) => {
     if (!button) return;
@@ -344,6 +360,11 @@ function timeToMinutes(value) {
   return h * 60 + m;
 }
 
+function generateItemId() {
+  itemIdSequence += 1;
+  return `item-${Date.now()}-${itemIdSequence}`;
+}
+
 function setValidity(input, ok, message = "") {
   input.classList.remove("invalid", "valid");
   input.removeAttribute("aria-invalid");
@@ -373,8 +394,51 @@ function normalizeDays() {
     } else if (typeof day.date !== "string") {
       day.date = "";
     }
-    if (!Array.isArray(day.items)) day.items = [];
+    if (!Array.isArray(day.rows)) day.rows = [];
   });
+}
+
+function normalizeRow(item = {}) {
+  return {
+    id: item.id ?? generateItemId(),
+    type: item.type ?? "place",
+    start: item.start ?? "",
+    end: item.end ?? "",
+    title: item.title ?? "",
+    from: item.from ?? "",
+    to: item.to ?? "",
+    location: item.location ?? "",
+    kind: item.kind ?? "",
+    category: item.category ?? "",
+    transport: item.transport ?? "",
+    cost: item.cost ?? "",
+    memo: item.memo ?? "",
+  };
+}
+
+function normalizeDataStructure(data) {
+  if (!data || typeof data !== "object") return data;
+  if (!data.trip || typeof data.trip !== "object") return data;
+  if (!Array.isArray(data.trip.days)) return data;
+
+  let migrated = false;
+  data.trip.days.forEach((day) => {
+    if (Array.isArray(day.rows)) {
+      day.rows = day.rows.map((row) => normalizeRow(row));
+      return;
+    }
+    if (Array.isArray(day.items)) {
+      day.rows = day.items.map((item) => normalizeRow(item));
+      delete day.items;
+      migrated = true;
+      return;
+    }
+    day.rows = [];
+  });
+  if (!data.schema_version || migrated) {
+    data.schema_version = SCHEMA_VERSION;
+  }
+  return data;
 }
 
 function validateTripMeta() {
@@ -642,7 +706,7 @@ function createRow(item, rowIndex) {
   typeSelect.addEventListener("change", () => {
     updateItem(rowIndex, "type", typeSelect.value);
     const day = state.data?.trip?.days?.[state.activeDayIndex];
-    const currentItem = day?.items?.[rowIndex];
+    const currentItem = day?.rows?.[rowIndex];
     const nextValue = getTransportOrLocationValue(currentItem, typeSelect.value);
     transportOrLocationInput.value = nextValue;
     validateRow();
@@ -660,9 +724,9 @@ function createRow(item, rowIndex) {
 
 function renderTable(day) {
   elements.tableBody.innerHTML = "";
-  if (!day?.items) return;
+  if (!day?.rows) return;
 
-  day.items.forEach((item, index) => {
+  day.rows.forEach((item, index) => {
     elements.tableBody.appendChild(createRow(item, index));
   });
 }
@@ -670,12 +734,12 @@ function renderTable(day) {
 function updateItem(index, key, value) {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
-  if (!day?.items[index]) return;
+  if (!day?.rows[index]) return;
 
   if (value === "" || value === null || value === undefined) {
-    delete day.items[index][key];
+    delete day.rows[index][key];
   } else {
-    day.items[index][key] = value;
+    day.rows[index][key] = value;
   }
   scheduleAutosave();
 }
@@ -683,10 +747,10 @@ function updateItem(index, key, value) {
 function addRow() {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
-  if (!day.items) day.items = [];
+  if (!day.rows) day.rows = [];
 
   const newItem = {
-    id: `item-${Date.now()}`,
+    id: generateItemId(),
     type: "place",
     start: "",
     end: "",
@@ -697,7 +761,7 @@ function addRow() {
     memo: "",
   };
 
-  day.items.push(newItem);
+  day.rows.push(newItem);
   scheduleAutosave();
   render();
 }
@@ -712,7 +776,7 @@ function addDay() {
     day: trip.days.length + 1,
     date: "",
     notes: "",
-    items: [],
+    rows: [],
   });
   normalizeDays();
   state.activeDayIndex = trip.days.length - 1;
@@ -740,7 +804,7 @@ function removeDay() {
 function deleteRow(index) {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
-  day.items.splice(index, 1);
+  day.rows.splice(index, 1);
   scheduleAutosave();
   render();
 }
@@ -764,6 +828,10 @@ function validateImportedData(data) {
   if (!data || typeof data !== "object") return "JSONオブジェクトではありません。";
   if (!data.trip || typeof data.trip !== "object") return "trip オブジェクトが必要です。";
   if (!Array.isArray(data.trip.days)) return "trip.days 配列が必要です。";
+  // 読み込み前バリデーションとして旧形式(items)も許容し、normalizeDataStructure で rows へ移行する
+  if (!data.trip.days.every((day) => Array.isArray(day.rows) || Array.isArray(day.items))) {
+    return "各 day は rows か items 配列が必要です。";
+  }
   if (typeof data.trip.title !== "string" || data.trip.title.trim() === "") {
     return "trip.title は必須です。";
   }
@@ -788,7 +856,7 @@ function handleImportJson(file) {
         alert(`JSONの形式が不正です: ${validationError}`);
         return;
       }
-      state.data = data;
+      state.data = normalizeDataStructure(data);
       normalizeDays();
       state.activeDayIndex = 0;
       scheduleAutosave();
@@ -829,20 +897,21 @@ async function copyShareUrl() {
   }
 }
 
-function buildTimeline(items) {
-  if (!items || items.length === 0) return [];
-  const sortable = items.map((item, index) => ({
-    index,
-    item,
-    start: isValidTime(item.start) ? timeToMinutes(item.start) : null,
-  }));
-  sortable.sort((a, b) => {
-    if (a.start === null && b.start === null) return a.index - b.index;
-    if (a.start === null) return 1;
-    if (b.start === null) return -1;
-    return a.start - b.start;
-  });
-  return sortable.map((entry) => entry.item);
+function getVisibleColumns() {
+  const visibility = isSimpleInputMode() ? SIMPLE_VISIBLE_COLUMNS : DETAIL_VISIBLE_COLUMNS;
+  const order = isSimpleInputMode() ? SIMPLE_COLUMN_ORDER : DETAIL_COLUMN_ORDER;
+  return order.filter((column) => visibility.has(column) && column !== "actions");
+}
+
+function getColumnLabel(column) {
+  const labels = isSimpleInputMode() ? SIMPLE_COLUMN_LABELS : DETAIL_COLUMN_LABELS;
+  if (labels[column]) return labels[column];
+  return COLUMN_LABELS[column] ?? column;
+}
+
+function getRowCellValue(row, column) {
+  if (column === "location") return getTransportOrLocationValue(row, row?.type);
+  return row?.[column] ?? "";
 }
 
 function createPdfPage(day, trip, pageNumber, totalPages) {
@@ -874,68 +943,25 @@ function createPdfPage(day, trip, pageNumber, totalPages) {
 
   const table = document.createElement("table");
   table.className = "pdf-table";
-  table.innerHTML = `
-    <thead>
-      <tr>
-        <th>Start</th>
-        <th>End</th>
-        <th>Type</th>
-        <th>Title</th>
-        <th>From</th>
-        <th>To</th>
-        <th>Location</th>
-        <th>Kind</th>
-        <th>Category</th>
-        <th>Transport</th>
-        <th>Cost</th>
-        <th>Memo</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  `;
+  const columns = getVisibleColumns();
+  table.innerHTML = "<thead><tr></tr></thead><tbody></tbody>";
+  const headerRow = table.querySelector("thead tr");
+  columns.forEach((column) => {
+    const th = document.createElement("th");
+    th.textContent = getColumnLabel(column);
+    headerRow.appendChild(th);
+  });
   const tbody = table.querySelector("tbody");
-  (day.items || []).forEach((item) => {
+  (day.rows || []).forEach((item) => {
     const tr = document.createElement("tr");
-    const cells = [
-      item.start ?? "",
-      item.end ?? "",
-      item.type ?? "",
-      item.title ?? "",
-      item.from ?? "",
-      item.to ?? "",
-      item.location ?? "",
-      item.kind ?? "",
-      item.category ?? "",
-      item.transport ?? "",
-      item.cost ?? "",
-      item.memo ?? "",
-    ];
-    cells.forEach((value) => {
+    columns.forEach((column) => {
       const td = document.createElement("td");
-      td.textContent = value;
+      td.textContent = String(getRowCellValue(item, column));
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
   });
   page.appendChild(table);
-
-  const timeline = document.createElement("div");
-  timeline.className = "pdf-timeline";
-  const timelineTitle = document.createElement("div");
-  timelineTitle.className = "pdf-section-title pdf-timeline__title";
-  timelineTitle.textContent = "Timeline";
-  timeline.appendChild(timelineTitle);
-
-  const list = document.createElement("ul");
-  list.className = "pdf-timeline__list";
-  buildTimeline(day.items || []).forEach((item) => {
-    const li = document.createElement("li");
-    const time = item.start && item.end ? `${item.start}–${item.end}` : (item.start ?? "");
-    li.textContent = `${time} ${item.title ?? ""}`.trim();
-    list.appendChild(li);
-  });
-  timeline.appendChild(list);
-  page.appendChild(timeline);
 
   const footer = document.createElement("div");
   footer.className = "pdf-footer";
@@ -1064,7 +1090,7 @@ async function init() {
         if (validationError) {
           throw new Error(validationError);
         }
-        data = parsed;
+        data = normalizeDataStructure(parsed);
         setSaveStatus("共有URLから読み込みました");
       } catch (error) {
         showToast(`共有URLデータを読み込めませんでした: ${error.message}`);
@@ -1076,7 +1102,7 @@ async function init() {
           const parsed = JSON.parse(cached);
           const validationError = validateImportedData(parsed);
           if (!validationError) {
-            data = parsed;
+            data = normalizeDataStructure(parsed);
             setSaveStatus("自動保存データを復元しました");
           }
         }
@@ -1089,6 +1115,7 @@ async function init() {
       const response = await fetch(DATA_URL);
       if (!response.ok) throw new Error("Failed to load JSON");
       data = await response.json();
+      data = normalizeDataStructure(data);
       setSaveStatus("サンプルデータを読み込みました");
     }
     state.data = data;
