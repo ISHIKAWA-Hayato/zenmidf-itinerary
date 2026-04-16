@@ -818,6 +818,7 @@ function validateImportedData(data) {
   if (!data || typeof data !== "object") return "JSONオブジェクトではありません。";
   if (!data.trip || typeof data.trip !== "object") return "trip オブジェクトが必要です。";
   if (!Array.isArray(data.trip.days)) return "trip.days 配列が必要です。";
+  // 読み込み前バリデーションとして旧形式(items)も許容し、normalizeDataStructure で rows へ移行する
   if (!data.trip.days.every((day) => Array.isArray(day.rows) || Array.isArray(day.items))) {
     return "各 day は rows 配列（旧形式は items 配列）を持つ必要があります。";
   }
@@ -899,7 +900,7 @@ function getColumnLabel(column) {
 }
 
 function getRowCellValue(row, column) {
-  if (column === "location") return getTransportOrLocationValue(row);
+  if (column === "location") return getTransportOrLocationValue(row, row?.type);
   return row?.[column] ?? "";
 }
 
