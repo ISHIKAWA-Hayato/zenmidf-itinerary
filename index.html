@@ -38,12 +38,12 @@
     <section class="trip-meta">
       <label class="trip-meta-field">
         <span>タイトル</span>
-        <input id="trip-title" class="input" type="text" placeholder="必須" />
+        <input id="trip-title" class="input" type="text" />
         <small id="trip-title-error" class="field-error"></small>
       </label>
-      <label class="trip-meta-field">
+      <label id="trip-timezone-field" class="trip-meta-field">
         <span>タイムゾーン</span>
-        <input id="trip-timezone" class="input" type="text" placeholder="必須" />
+        <input id="trip-timezone" class="input" type="text" />
         <small id="trip-timezone-error" class="field-error"></small>
       </label>
       <label class="trip-meta-field">
@@ -75,6 +75,9 @@
     <section class="table-section">
       <div class="table-actions">
         <button id="add-row" type="button">+ 行を追加</button>
+        <button id="undo" type="button">元に戻す</button>
+        <button id="redo" type="button">やり直す</button>
+        <button id="delete-all-rows" type="button">全削除</button>
         <button id="download-json" type="button">JSON保存</button>
         <button id="import-json-btn" type="button">JSON読込</button>
         <button id="share-url" type="button">共有URLをコピー</button>
@@ -106,7 +109,7 @@
     </section>
 
     <footer class="app-footer">
-      <p>データ: docs/sample_itinerary_v0.json を読み込み中</p>
+      <p>データ: ブラウザ保存またはJSON読込を利用してください</p>
     </footer>
   </div>
 
