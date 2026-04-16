@@ -415,7 +415,7 @@ function normalizeDataStructure(data) {
   if (!data.trip || typeof data.trip !== "object") return data;
   if (!Array.isArray(data.trip.days)) return data;
 
-  data.schema_version = SCHEMA_VERSION;
+  let migrated = false;
   data.trip.days.forEach((day) => {
     if (Array.isArray(day.rows)) {
       day.rows = day.rows.map((row) => normalizeRow(row));
@@ -424,10 +424,14 @@ function normalizeDataStructure(data) {
     if (Array.isArray(day.items)) {
       day.rows = day.items.map((item) => normalizeRow(item));
       delete day.items;
+      migrated = true;
       return;
     }
     day.rows = [];
   });
+  if (!data.schema_version || migrated) {
+    data.schema_version = SCHEMA_VERSION;
+  }
   return data;
 }
 
@@ -820,7 +824,7 @@ function validateImportedData(data) {
   if (!Array.isArray(data.trip.days)) return "trip.days 配列が必要です。";
   // 読み込み前バリデーションとして旧形式(items)も許容し、normalizeDataStructure で rows へ移行する
   if (!data.trip.days.every((day) => Array.isArray(day.rows) || Array.isArray(day.items))) {
-    return "各 day は rows 配列（旧形式は items 配列）を持つ必要があります。";
+    return "各 day は rows または items 配列が必要です。";
   }
   if (typeof data.trip.title !== "string" || data.trip.title.trim() === "") {
     return "trip.title は必須です。";
