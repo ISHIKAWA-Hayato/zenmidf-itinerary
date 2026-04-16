@@ -1,7 +1,28 @@
 const DATA_URL = "docs/sample_itinerary_v0.json";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
+const INPUT_MODE_STORAGE_KEY = "zenmidf-itinerary-input-mode-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
+const INPUT_MODES = {
+  DETAIL: "detail",
+  SIMPLE: "simple",
+};
+const TABLE_COLUMNS = [
+  "start",
+  "end",
+  "type",
+  "title",
+  "from",
+  "to",
+  "location",
+  "kind",
+  "category",
+  "transport",
+  "cost",
+  "memo",
+  "actions",
+];
+const SIMPLE_VISIBLE_COLUMNS = new Set(["start", "end", "type", "title", "memo", "actions"]);
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -9,6 +30,7 @@ const state = {
   data: null,
   activeDayIndex: 0,
   readOnly: false,
+  inputMode: INPUT_MODES.DETAIL,
   saveTimer: null,
   toastTimer: null,
 };
@@ -29,11 +51,15 @@ const elements = {
   tripStartDate: document.getElementById("trip-start-date"),
   tripStartDateError: document.getElementById("trip-start-date-error"),
   tripDayStart: document.getElementById("trip-day-start"),
+  tripDayStartField: document.getElementById("trip-day-start-field"),
   tripDayStartError: document.getElementById("trip-day-start-error"),
+  inputModeDetail: document.getElementById("input-mode-detail"),
+  inputModeSimple: document.getElementById("input-mode-simple"),
   dayTabs: document.getElementById("day-tabs"),
   addDay: document.getElementById("add-day"),
   removeDay: document.getElementById("remove-day"),
   tableBody: document.getElementById("table-body"),
+  itineraryTable: document.getElementById("itinerary-table"),
   addRow: document.getElementById("add-row"),
   downloadJson: document.getElementById("download-json"),
   importJsonBtn: document.getElementById("import-json-btn"),
@@ -152,6 +178,54 @@ function setReadOnlyMode(readOnly) {
   });
 }
 
+function isSimpleInputMode() {
+  return state.inputMode === INPUT_MODES.SIMPLE;
+}
+
+function renderInputModeSwitch() {
+  const modeButtons = [
+    [elements.inputModeDetail, INPUT_MODES.DETAIL],
+    [elements.inputModeSimple, INPUT_MODES.SIMPLE],
+  ];
+  modeButtons.forEach(([button, mode]) => {
+    if (!button) return;
+    const selected = state.inputMode === mode;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", selected ? "true" : "false");
+  });
+}
+
+function applyInputModeVisibility() {
+  const isSimple = isSimpleInputMode();
+  if (elements.tripDayStartField) {
+    elements.tripDayStartField.hidden = isSimple;
+  }
+  if (!elements.itineraryTable) return;
+  TABLE_COLUMNS.forEach((column) => {
+    const visible = !isSimple || SIMPLE_VISIBLE_COLUMNS.has(column);
+    elements.itineraryTable
+      .querySelectorAll(`[data-col="${column}"]`)
+      .forEach((el) => {
+        el.hidden = !visible;
+      });
+  });
+}
+
+function setInputMode(mode, { persist = true } = {}) {
+  const nextMode = mode === INPUT_MODES.SIMPLE ? INPUT_MODES.SIMPLE : INPUT_MODES.DETAIL;
+  if (state.inputMode === nextMode) return;
+  state.inputMode = nextMode;
+  renderInputModeSwitch();
+  render();
+  if (persist && !state.readOnly) {
+    try {
+      localStorage.setItem(INPUT_MODE_STORAGE_KEY, nextMode);
+    } catch (error) {
+      // localStorage が使えない環境では永続化しない
+    }
+  }
+}
+
 function scheduleAutosave() {
   if (state.readOnly || !state.data) return;
   setSaveStatus("保存中...");
@@ -223,6 +297,7 @@ function validateTripMeta() {
   const timezone = (trip.timezone ?? "").trim();
   const startDate = (trip.start_date ?? "").trim();
   const dayStart = (trip.day_start ?? "").trim();
+  const isDayStartVisible = !isSimpleInputMode();
 
   const titleOk = title.length > 0;
   const timezoneRequiredOk = timezone.length > 0;
@@ -230,6 +305,11 @@ function validateTripMeta() {
   const timezoneOk = timezoneRequiredOk && timezoneFormatOk;
   const startDateOk = isValidDate(startDate);
   const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
+  const hasDayStartInput = isDayStartVisible && dayStart !== "";
+  const dayStartValidity = hasDayStartInput ? dayStartOk : null;
+  const dayStartError = hasDayStartInput && !dayStartOk
+    ? VALIDATION_MESSAGES.dayStartFormat
+    : "";
 
   setValidity(
     elements.tripTitle,
@@ -251,8 +331,8 @@ function validateTripMeta() {
   // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
   setValidity(
     elements.tripDayStart,
-    dayStart === "" ? null : dayStartOk,
-    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
+    dayStartValidity,
+    dayStartError
   );
 
   setFieldError(
@@ -271,10 +351,10 @@ function validateTripMeta() {
   );
   setFieldError(
     elements.tripDayStartError,
-    dayStart === "" || dayStartOk ? "" : VALIDATION_MESSAGES.dayStartFormat
+    dayStartError
   );
 
-  return titleOk && timezoneOk && startDateOk && dayStartOk;
+  return titleOk && timezoneOk && startDateOk && (isDayStartVisible ? dayStartOk : true);
 }
 
 function renderTripMeta(trip) {
@@ -353,22 +433,23 @@ function createRow(item, rowIndex) {
   titleInput.placeholder = "必須";
 
   const cells = [
-    startInput,
-    endInput,
-    typeSelect,
-    titleInput,
-    fromInput,
-    toInput,
-    locationInput,
-    kindInput,
-    categoryInput,
-    transportInput,
-    costInput,
-    memoInput,
+    { key: "start", el: startInput },
+    { key: "end", el: endInput },
+    { key: "type", el: typeSelect },
+    { key: "title", el: titleInput },
+    { key: "from", el: fromInput },
+    { key: "to", el: toInput },
+    { key: "location", el: locationInput },
+    { key: "kind", el: kindInput },
+    { key: "category", el: categoryInput },
+    { key: "transport", el: transportInput },
+    { key: "cost", el: costInput },
+    { key: "memo", el: memoInput },
   ];
 
-  cells.forEach((el) => {
+  cells.forEach(({ key, el }) => {
     const td = document.createElement("td");
+    td.dataset.col = key;
     td.appendChild(el);
     tr.appendChild(td);
   });
@@ -382,12 +463,14 @@ function createRow(item, rowIndex) {
   deleteBtn.disabled = state.readOnly;
   deleteBtn.addEventListener("click", () => deleteRow(rowIndex));
   deleteTd.appendChild(deleteBtn);
+  deleteTd.dataset.col = "actions";
   tr.appendChild(deleteTd);
 
   function validateRow() {
     const start = startInput.value.trim();
     const end = endInput.value.trim();
     const title = titleInput.value.trim();
+    const isSimpleMode = isSimpleInputMode();
     const costRaw = costInput.value.trim();
 
     const startValid = start === "" ? true : isValidTime(start);
@@ -420,10 +503,14 @@ function createRow(item, rowIndex) {
       titleOk ? "" : "Title は必須です"
     );
 
+    let costValidity = null;
+    if (!isSimpleMode && costRaw !== "") {
+      costValidity = costValid;
+    }
     setValidity(
       costInput,
-      costRaw === "" ? null : costValid,
-      costValid ? "" : "Cost は 0 以上の整数で入力してください"
+      costValidity,
+      isSimpleMode || costValid ? "" : "Cost は 0 以上の整数で入力してください"
     );
   }
 
@@ -458,7 +545,7 @@ function createRow(item, rowIndex) {
   memoInput.addEventListener("input", () => updateItem(rowIndex, "memo", memoInput.value));
 
   if (state.readOnly) {
-    cells.forEach((el) => {
+    cells.forEach(({ el }) => {
       el.disabled = true;
     });
   }
@@ -838,10 +925,12 @@ function render() {
   const trip = state.data.trip;
   normalizeDays();
 
+  renderInputModeSwitch();
   renderTripMeta(trip);
   renderTabs(trip.days);
   renderPdfDayList(trip.days);
   renderTable(trip.days[state.activeDayIndex]);
+  applyInputModeVisibility();
   elements.removeDay.disabled = state.readOnly || trip.days.length <= 1;
 }
 
@@ -851,6 +940,14 @@ async function init() {
     const params = new URLSearchParams(window.location.search);
     const readonlyParam = params.get("readonly");
     setReadOnlyMode(readonlyParam === "1" || readonlyParam === "true");
+    try {
+      const cachedMode = localStorage.getItem(INPUT_MODE_STORAGE_KEY);
+      if (cachedMode === INPUT_MODES.SIMPLE || cachedMode === INPUT_MODES.DETAIL) {
+        state.inputMode = cachedMode;
+      }
+    } catch (error) {
+      // localStorage が使えない環境では既定値を利用
+    }
 
     const sharedData = params.get("data");
     let data = null;
@@ -923,6 +1020,8 @@ async function init() {
     elements.tripTimezone.setAttribute("aria-describedby", "trip-timezone-error");
     elements.tripStartDate.setAttribute("aria-describedby", "trip-start-date-error");
     elements.tripDayStart.setAttribute("aria-describedby", "trip-day-start-error");
+    elements.inputModeDetail.addEventListener("click", () => setInputMode(INPUT_MODES.DETAIL));
+    elements.inputModeSimple.addEventListener("click", () => setInputMode(INPUT_MODES.SIMPLE));
     elements.tripTitle.addEventListener("input", onTripMetaInput);
     elements.tripTimezone.addEventListener("input", onTripMetaInput);
     elements.tripStartDate.addEventListener("input", onTripMetaInput);
