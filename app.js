@@ -23,6 +23,61 @@ const TABLE_COLUMNS = [
   "actions",
 ];
 const SIMPLE_VISIBLE_COLUMNS = new Set(["start", "end", "type", "title", "memo", "actions"]);
+const DETAIL_VISIBLE_COLUMNS = new Set([
+  "type",
+  "from",
+  "start",
+  "to",
+  "end",
+  "location",
+  "title",
+  "kind",
+  "category",
+  "cost",
+  "memo",
+  "actions",
+]);
+const SIMPLE_COLUMN_ORDER = [
+  "start",
+  "end",
+  "type",
+  "title",
+  "from",
+  "to",
+  "location",
+  "kind",
+  "category",
+  "transport",
+  "cost",
+  "memo",
+  "actions",
+];
+const DETAIL_COLUMN_ORDER = [
+  "type",
+  "from",
+  "start",
+  "to",
+  "end",
+  "location",
+  "title",
+  "kind",
+  "category",
+  "cost",
+  "memo",
+  "actions",
+];
+const SIMPLE_COLUMN_LABELS = {
+  title: "Title",
+  location: "Location",
+  category: "Category",
+  transport: "Transport",
+};
+const DETAIL_COLUMN_LABELS = {
+  title: "Number",
+  location: "Transport/Location",
+  category: "Destination",
+  transport: "Transport",
+};
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -30,7 +85,7 @@ const state = {
   data: null,
   activeDayIndex: 0,
   readOnly: false,
-  inputMode: INPUT_MODES.DETAIL,
+  inputMode: INPUT_MODES.SIMPLE,
   saveTimer: null,
   toastTimer: null,
 };
@@ -201,8 +256,31 @@ function applyInputModeVisibility() {
     elements.tripDayStartField.hidden = isSimple;
   }
   if (!elements.itineraryTable) return;
+  const columnOrder = isSimple ? SIMPLE_COLUMN_ORDER : DETAIL_COLUMN_ORDER;
+  const columnLabels = isSimple ? SIMPLE_COLUMN_LABELS : DETAIL_COLUMN_LABELS;
+  const visibility = isSimple ? SIMPLE_VISIBLE_COLUMNS : DETAIL_VISIBLE_COLUMNS;
+
+  const headerRow = elements.itineraryTable.tHead?.rows?.[0];
+  if (headerRow) {
+    columnOrder.forEach((column) => {
+      const th = headerRow.querySelector(`[data-col="${column}"]`);
+      if (th) headerRow.appendChild(th);
+    });
+    Object.entries(columnLabels).forEach(([column, text]) => {
+      const th = headerRow.querySelector(`[data-col="${column}"]`);
+      if (th) th.textContent = text;
+    });
+  }
+
+  elements.tableBody.querySelectorAll("tr").forEach((tr) => {
+    columnOrder.forEach((column) => {
+      const td = tr.querySelector(`[data-col="${column}"]`);
+      if (td) tr.appendChild(td);
+    });
+  });
+
   TABLE_COLUMNS.forEach((column) => {
-    const visible = !isSimple || SIMPLE_VISIBLE_COLUMNS.has(column);
+    const visible = visibility.has(column);
     elements.itineraryTable
       .querySelectorAll(`[data-col="${column}"]`)
       .forEach((el) => {
@@ -414,12 +492,19 @@ function createRow(item, rowIndex) {
   const tr = document.createElement("tr");
 
   const startInput = createInput(item.start);
+  startInput.type = "time";
+  startInput.step = "60";
   const endInput = createInput(item.end);
+  endInput.type = "time";
+  endInput.step = "60";
   const typeSelect = createSelect(["move", "place", "do"], item.type);
   const titleInput = createInput(item.title);
   const fromInput = createInput(item.from);
   const toInput = createInput(item.to);
-  const locationInput = createInput(item.location);
+  const transportOrLocationValue = item.type === "move"
+    ? (item.transport ?? "")
+    : (item.location ?? "");
+  const locationInput = createInput(transportOrLocationValue);
   const kindInput = createInput(item.kind);
   const categoryInput = createInput(item.category);
   const transportInput = createInput(item.transport);
@@ -522,14 +607,16 @@ function createRow(item, rowIndex) {
     updateItem(rowIndex, "end", endInput.value);
     validateRow();
   });
-  typeSelect.addEventListener("change", () => updateItem(rowIndex, "type", typeSelect.value));
   titleInput.addEventListener("input", () => {
     updateItem(rowIndex, "title", titleInput.value);
     validateRow();
   });
   fromInput.addEventListener("input", () => updateItem(rowIndex, "from", fromInput.value));
   toInput.addEventListener("input", () => updateItem(rowIndex, "to", toInput.value));
-  locationInput.addEventListener("input", () => updateItem(rowIndex, "location", locationInput.value));
+  locationInput.addEventListener("input", () => {
+    const key = typeSelect.value === "move" ? "transport" : "location";
+    updateItem(rowIndex, key, locationInput.value);
+  });
   kindInput.addEventListener("input", () => updateItem(rowIndex, "kind", kindInput.value));
   categoryInput.addEventListener("input", () => updateItem(rowIndex, "category", categoryInput.value));
   transportInput.addEventListener("input", () => updateItem(rowIndex, "transport", transportInput.value));
@@ -543,6 +630,17 @@ function createRow(item, rowIndex) {
     validateRow();
   });
   memoInput.addEventListener("input", () => updateItem(rowIndex, "memo", memoInput.value));
+
+  typeSelect.addEventListener("change", () => {
+    updateItem(rowIndex, "type", typeSelect.value);
+    const day = state.data?.trip?.days?.[state.activeDayIndex];
+    const currentItem = day?.items?.[rowIndex];
+    const nextValue = typeSelect.value === "move"
+      ? (currentItem?.transport ?? "")
+      : (currentItem?.location ?? "");
+    locationInput.value = nextValue;
+    validateRow();
+  });
 
   if (state.readOnly) {
     cells.forEach(({ el }) => {
