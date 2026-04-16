@@ -1,13 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ISHIKAWA-Hayato/zenmidf-itinerary/schema_v0.json",
-  "title": "Zenmidf Itinerary Schema v0",
+  "title": "Zenmidf Itinerary Schema v0 (rows format)",
   "type": "object",
   "required": ["schema_version", "trip"],
   "properties": {
-    "schema_version": {
-      "type": "string"
-    },
+    "schema_version": { "const": "0.2.0" },
     "trip": {
       "type": "object",
       "required": ["title", "timezone", "start_date", "days"],
@@ -28,12 +26,12 @@
   "$defs": {
     "day": {
       "type": "object",
-      "required": ["day", "date", "items"],
+      "required": ["day", "date", "rows"],
       "properties": {
         "day": { "type": "integer", "minimum": 1 },
         "date": { "type": "string", "format": "date" },
         "notes": { "type": "string" },
-        "items": {
+        "rows": {
           "type": "array",
           "items": { "$ref": "#/$defs/item" }
         }
