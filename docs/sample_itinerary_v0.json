@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2.0",
+  "schema_version": "0.1.0",
   "trip": {
     "title": "東京→名古屋 1泊2日サンプル",
     "timezone": "Asia/Tokyo",
@@ -9,7 +9,7 @@
         "day": 1,
         "date": "2026-04-01",
         "notes": "午前移動、午後観光",
-        "rows": [
+        "items": [
           {
             "id": "item-001",
             "type": "move",
@@ -91,7 +91,7 @@
         "day": 2,
         "date": "2026-04-02",
         "notes": "午前観光→帰路",
-        "rows": [
+        "items": [
           {
             "id": "item-008",
             "type": "place",
