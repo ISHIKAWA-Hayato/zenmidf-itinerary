@@ -17,12 +17,6 @@
 
 ## JSON スキーマ（canonical）
 - `schema_v0.json` を参照
-- **Breaking change (Issue #23)**: Day配下の配列キーを `items` から `rows` に変更（`schema_version: "0.2.0"`）
-
-### v0.2.0 マイグレーション
-- 旧形式: `trip.days[].items`
-- 新形式: `trip.days[].rows`
-- アプリ読込時は旧 `items` を自動変換して `rows` として扱います。JSON保存時は新形式で出力されます。
 
 ## サンプルデータ
 - `docs/sample_itinerary_v0.json` を参照
@@ -42,7 +36,7 @@
 - タイムラインはPDF出力時のみ自動生成
 - 編集内容はブラウザ `localStorage` に自動保存
 - 共有URLは `data` クエリにJSONを含み、`readonly=1` で閲覧専用モード
-- 入力モード切替に対応（左: 簡易モード / 右: 詳細モード）。簡易モードは最小入力向けに表示項目を絞り、trip の必須入力は `title/timezone/start_date`、行は `title` を必須として扱う（データ保存先は共通）
+- 入力モード切替に対応（詳細入力/簡易入力）。簡易入力は最小入力向けに表示項目を絞り、trip の必須入力は `title/timezone/start_date`、行は `title` を必須として扱う（データ保存先は共通）
 
 ## Issue
 - https://github.com/ISHIKAWA-Hayato/zenmidf-itinerary/issues
