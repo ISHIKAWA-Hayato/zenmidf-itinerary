@@ -105,6 +105,7 @@ const state = {
   saveTimer: null,
   toastTimer: null,
 };
+let itemIdSequence = 0;
 
 const VALIDATION_MESSAGES = {
   titleRequired: "タイトルは必須です",
@@ -360,7 +361,8 @@ function timeToMinutes(value) {
 }
 
 function generateItemId() {
-  return `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  itemIdSequence += 1;
+  return `item-${Date.now()}-${itemIdSequence}`;
 }
 
 function setValidity(input, ok, message = "") {
@@ -828,7 +830,7 @@ function validateImportedData(data) {
   if (!Array.isArray(data.trip.days)) return "trip.days 配列が必要です。";
   // 読み込み前バリデーションとして旧形式(items)も許容し、normalizeDataStructure で rows へ移行する
   if (!data.trip.days.every((day) => Array.isArray(day.rows) || Array.isArray(day.items))) {
-    return "各 day は rows または items 配列が必要です。";
+    return "各 day は rows か items 配列が必要です。";
   }
   if (typeof data.trip.title !== "string" || data.trip.title.trim() === "") {
     return "trip.title は必須です。";
