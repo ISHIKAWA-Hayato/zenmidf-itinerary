@@ -297,7 +297,7 @@ function validateTripMeta() {
   const timezone = (trip.timezone ?? "").trim();
   const startDate = (trip.start_date ?? "").trim();
   const dayStart = (trip.day_start ?? "").trim();
-  const shouldValidateDayStart = !isSimpleInputMode();
+  const isDayStartVisible = !isSimpleInputMode();
 
   const titleOk = title.length > 0;
   const timezoneRequiredOk = timezone.length > 0;
@@ -305,6 +305,11 @@ function validateTripMeta() {
   const timezoneOk = timezoneRequiredOk && timezoneFormatOk;
   const startDateOk = isValidDate(startDate);
   const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
+  const hasDayStartInput = isDayStartVisible && dayStart !== "";
+  const dayStartValidity = hasDayStartInput ? dayStartOk : null;
+  const dayStartError = hasDayStartInput && !dayStartOk
+    ? VALIDATION_MESSAGES.dayStartFormat
+    : "";
 
   setValidity(
     elements.tripTitle,
@@ -326,8 +331,8 @@ function validateTripMeta() {
   // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
   setValidity(
     elements.tripDayStart,
-    shouldValidateDayStart ? (dayStart === "" ? null : dayStartOk) : null,
-    shouldValidateDayStart && !(dayStart === "" || dayStartOk) ? VALIDATION_MESSAGES.dayStartFormat : ""
+    dayStartValidity,
+    dayStartError
   );
 
   setFieldError(
@@ -346,10 +351,10 @@ function validateTripMeta() {
   );
   setFieldError(
     elements.tripDayStartError,
-    shouldValidateDayStart && !(dayStart === "" || dayStartOk) ? VALIDATION_MESSAGES.dayStartFormat : ""
+    dayStartError
   );
 
-  return titleOk && timezoneOk && startDateOk && (shouldValidateDayStart ? dayStartOk : true);
+  return titleOk && timezoneOk && startDateOk && (isDayStartVisible ? dayStartOk : true);
 }
 
 function renderTripMeta(trip) {
@@ -498,9 +503,13 @@ function createRow(item, rowIndex) {
       titleOk ? "" : "Title は必須です"
     );
 
+    let costValidity = null;
+    if (!isSimpleMode && costRaw !== "") {
+      costValidity = costValid;
+    }
     setValidity(
       costInput,
-      isSimpleMode ? null : (costRaw === "" ? null : costValid),
+      costValidity,
       isSimpleMode || costValid ? "" : "Cost は 0 以上の整数で入力してください"
     );
   }
