@@ -792,6 +792,24 @@ async function exportPdf() {
       scale: 2,
       backgroundColor: "#ffffff",
       useCORS: true,
+      onclone: (clonedDoc) => {
+        const rootVars = clonedDoc.createElement("style");
+        rootVars.textContent = `:root {
+          --bg: #f3f6f8;
+          --card: #ffffff;
+          --text: #111827;
+          --muted: #374151;
+          --primary: #0f766e;
+          --primary-strong: #0d5f59;
+          --primary-soft: #e9f7f6;
+          --border: #dbe3ea;
+          --table-header: #eef3f6;
+          --danger: #dc2626;
+          --success: #16a34a;
+          --ring: rgba(15, 118, 110, 0.28);
+        }`;
+        clonedDoc.head.appendChild(rootVars);
+      },
     });
 
     let imgWidth = pageWidth;
