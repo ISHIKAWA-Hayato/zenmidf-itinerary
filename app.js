@@ -80,6 +80,20 @@ const DETAIL_COLUMN_LABELS = {
   category: "Destination",
   transport: "Transport",
 };
+const COLUMN_LABELS = {
+  start: "Start",
+  end: "End",
+  type: "Type",
+  title: "Title",
+  from: "From",
+  to: "To",
+  location: "Location",
+  kind: "Kind",
+  category: "Category",
+  transport: "Transport",
+  cost: "Cost",
+  memo: "Memo",
+};
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
 
@@ -881,7 +895,7 @@ function getVisibleColumns() {
 function getColumnLabel(column) {
   const labels = isSimpleInputMode() ? SIMPLE_COLUMN_LABELS : DETAIL_COLUMN_LABELS;
   if (labels[column]) return labels[column];
-  return column.charAt(0).toUpperCase() + column.slice(1);
+  return COLUMN_LABELS[column] ?? column;
 }
 
 function getRowCellValue(row, column) {
