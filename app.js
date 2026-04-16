@@ -359,6 +359,10 @@ function timeToMinutes(value) {
   return h * 60 + m;
 }
 
+function generateItemId() {
+  return `item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 function setValidity(input, ok, message = "") {
   input.classList.remove("invalid", "valid");
   input.removeAttribute("aria-invalid");
@@ -394,7 +398,7 @@ function normalizeDays() {
 
 function normalizeRow(item = {}) {
   return {
-    id: item.id ?? `item-${Date.now()}`,
+    id: item.id ?? generateItemId(),
     type: item.type ?? "place",
     start: item.start ?? "",
     end: item.end ?? "",
@@ -744,7 +748,7 @@ function addRow() {
   if (!day.rows) day.rows = [];
 
   const newItem = {
-    id: `item-${Date.now()}`,
+    id: generateItemId(),
     type: "place",
     start: "",
     end: "",
