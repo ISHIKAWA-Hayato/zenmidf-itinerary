@@ -42,7 +42,7 @@
 - タイムラインはPDF出力時のみ自動生成
 - 編集内容はブラウザ `localStorage` に自動保存
 - 共有URLは `data` クエリにJSONを含み、`readonly=1` で閲覧専用モード
-- 入力モード切替に対応（左: 簡易モード / 右: 詳細モード）。簡易モードは最小入力向けに表示項目を絞り、trip の必須入力は `title/timezone/start_date`、行は `title` を必須として扱う（データ保存先は共通）
+- 入力モード切替に対応（左: 簡易モード / 右: 詳細モード）。簡易モードは最小入力向けに表示項目を絞り、詳細モードでは補助項目ラベルを日本語表示する（データ保存先は共通）
 
 ## Issue
 - https://github.com/ISHIKAWA-Hayato/zenmidf-itinerary/issues

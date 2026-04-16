@@ -1,10 +1,10 @@
-const DATA_URL = "docs/sample_itinerary_v0.json";
 const SCHEMA_VERSION = "0.2.0";
 const STORAGE_KEY = "zenmidf-itinerary-autosave-v1";
 const INPUT_MODE_STORAGE_KEY = "zenmidf-itinerary-input-mode-v1";
 const DEFAULT_LOCALE = "ja-JP";
 const COST_PATTERN = /^\d+$/;
 const TIME_INPUT_STEP_SECONDS = "60";
+const MAX_HISTORY_LENGTH = 100;
 const INPUT_MODES = {
   DETAIL: "detail",
   SIMPLE: "simple",
@@ -75,10 +75,12 @@ const SIMPLE_COLUMN_LABELS = {
   transport: "Transport",
 };
 const DETAIL_COLUMN_LABELS = {
-  title: "Number",
-  location: "Transport/Location",
-  category: "Destination",
-  transport: "Transport",
+  title: "便名/列車番号",
+  location: "路線名など",
+  kind: "種別",
+  category: "行先",
+  cost: "運賃/費用",
+  transport: "路線名など",
 };
 const COLUMN_LABELS = {
   start: "Start",
@@ -104,6 +106,8 @@ const state = {
   inputMode: INPUT_MODES.SIMPLE,
   saveTimer: null,
   toastTimer: null,
+  history: [],
+  historyIndex: -1,
 };
 let itemIdSequence = 0;
 
@@ -118,6 +122,7 @@ const VALIDATION_MESSAGES = {
 const elements = {
   tripTitle: document.getElementById("trip-title"),
   tripTitleError: document.getElementById("trip-title-error"),
+  tripTimezoneField: document.getElementById("trip-timezone-field"),
   tripTimezone: document.getElementById("trip-timezone"),
   tripTimezoneError: document.getElementById("trip-timezone-error"),
   tripStartDate: document.getElementById("trip-start-date"),
@@ -133,6 +138,9 @@ const elements = {
   tableBody: document.getElementById("table-body"),
   itineraryTable: document.getElementById("itinerary-table"),
   addRow: document.getElementById("add-row"),
+  undo: document.getElementById("undo"),
+  redo: document.getElementById("redo"),
+  deleteAllRows: document.getElementById("delete-all-rows"),
   downloadJson: document.getElementById("download-json"),
   importJsonBtn: document.getElementById("import-json-btn"),
   importJsonInput: document.getElementById("import-json"),
@@ -185,6 +193,30 @@ function isValidDate(value) {
 function isValidTimezone(value) {
   // 例: Asia/Tokyo, America/New_York
   return /^[A-Za-z][A-Za-z0-9_+\-]*(?:\/[A-Za-z0-9_+\-]+)+$/.test(value);
+}
+
+function cloneData(data) {
+  return JSON.parse(JSON.stringify(data));
+}
+
+function createEmptyData() {
+  return {
+    schema_version: SCHEMA_VERSION,
+    trip: {
+      title: "",
+      timezone: "",
+      start_date: "",
+      day_start: "",
+      days: [
+        {
+          day: 1,
+          date: "",
+          notes: "",
+          rows: [],
+        },
+      ],
+    },
+  };
 }
 
 function getTransportOrLocationKey(type) {
@@ -250,6 +282,9 @@ function setReadOnlyMode(readOnly) {
     elements.addDay,
     elements.removeDay,
     elements.addRow,
+    elements.undo,
+    elements.redo,
+    elements.deleteAllRows,
     elements.importJsonBtn,
     elements.importJsonInput,
   ];
@@ -278,6 +313,9 @@ function renderInputModeSwitch() {
 
 function applyInputModeVisibility() {
   const isSimple = isSimpleInputMode();
+  if (elements.tripTimezoneField) {
+    elements.tripTimezoneField.hidden = isSimple;
+  }
   if (elements.tripDayStartField) {
     elements.tripDayStartField.hidden = isSimple;
   }
@@ -343,6 +381,67 @@ function scheduleAutosave() {
       setSaveStatus("自動保存に失敗しました");
     }
   }, 320);
+}
+
+function updateHistoryButtons() {
+  const canUndo = !state.readOnly && state.historyIndex > 0;
+  const canRedo = !state.readOnly && state.historyIndex >= 0 && state.historyIndex < state.history.length - 1;
+  if (elements.undo) elements.undo.disabled = !canUndo;
+  if (elements.redo) elements.redo.disabled = !canRedo;
+}
+
+function pushHistorySnapshot() {
+  if (!state.data || state.readOnly) return;
+  const serializedData = JSON.stringify(state.data);
+  const snapshot = {
+    data: cloneData(state.data),
+    activeDayIndex: state.activeDayIndex,
+    serializedData,
+  };
+  const currentSnapshot = state.history[state.historyIndex];
+  if (
+    currentSnapshot &&
+    currentSnapshot.activeDayIndex === snapshot.activeDayIndex &&
+    currentSnapshot.serializedData === snapshot.serializedData
+  ) {
+    updateHistoryButtons();
+    return;
+  }
+
+  if (state.historyIndex < state.history.length - 1) {
+    state.history = state.history.slice(0, state.historyIndex + 1);
+  }
+  state.history.push(snapshot);
+  if (state.history.length > MAX_HISTORY_LENGTH) {
+    state.history.shift();
+  }
+  state.historyIndex = state.history.length - 1;
+  updateHistoryButtons();
+}
+
+function applyHistorySnapshot(snapshot) {
+  if (!snapshot) return;
+  state.data = normalizeDataStructure(cloneData(snapshot.data));
+  normalizeDays();
+  const days = state.data?.trip?.days ?? [];
+  state.activeDayIndex = Math.max(0, Math.min(snapshot.activeDayIndex ?? 0, days.length - 1));
+  render();
+  scheduleAutosave();
+  updateHistoryButtons();
+}
+
+function undo() {
+  if (state.readOnly || state.historyIndex <= 0) return;
+  state.historyIndex -= 1;
+  applyHistorySnapshot(state.history[state.historyIndex]);
+  showToast("元に戻しました");
+}
+
+function redo() {
+  if (state.readOnly || state.historyIndex >= state.history.length - 1) return;
+  state.historyIndex += 1;
+  applyHistorySnapshot(state.history[state.historyIndex]);
+  showToast("やり直しました");
 }
 
 function addDays(dateText, days) {
@@ -451,11 +550,9 @@ function validateTripMeta() {
   const dayStart = (trip.day_start ?? "").trim();
   const isDayStartVisible = !isSimpleInputMode();
 
-  const titleOk = title.length > 0;
-  const timezoneRequiredOk = timezone.length > 0;
-  const timezoneFormatOk = timezoneRequiredOk ? isValidTimezone(timezone) : false;
-  const timezoneOk = timezoneRequiredOk && timezoneFormatOk;
-  const startDateOk = isValidDate(startDate);
+  const titleOk = true;
+  const timezoneOk = timezone === "" ? true : isValidTimezone(timezone);
+  const startDateOk = startDate === "" ? true : isValidDate(startDate);
   const dayStartOk = dayStart === "" ? true : isValidTime(dayStart);
   const hasDayStartInput = isDayStartVisible && dayStart !== "";
   const dayStartValidity = hasDayStartInput ? dayStartOk : null;
@@ -465,19 +562,17 @@ function validateTripMeta() {
 
   setValidity(
     elements.tripTitle,
-    titleOk,
-    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+    null,
+    ""
   );
   setValidity(
     elements.tripTimezone,
-    timezoneOk,
-    timezoneRequiredOk
-      ? (timezoneFormatOk ? "" : VALIDATION_MESSAGES.timezoneFormat)
-      : VALIDATION_MESSAGES.timezoneRequired
+    timezone === "" ? null : timezoneOk,
+    timezoneOk ? "" : VALIDATION_MESSAGES.timezoneFormat
   );
   setValidity(
     elements.tripStartDate,
-    startDateOk,
+    startDate === "" ? null : startDateOk,
     startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
   );
   // day_start は任意項目のため、空欄は未判定（null）として表示色を付けない
@@ -489,17 +584,15 @@ function validateTripMeta() {
 
   setFieldError(
     elements.tripTitleError,
-    titleOk ? "" : VALIDATION_MESSAGES.titleRequired
+    ""
   );
   setFieldError(
     elements.tripTimezoneError,
-    timezoneRequiredOk
-      ? (timezoneFormatOk ? "" : VALIDATION_MESSAGES.timezoneFormat)
-      : VALIDATION_MESSAGES.timezoneRequired
+    timezone === "" || timezoneOk ? "" : VALIDATION_MESSAGES.timezoneFormat
   );
   setFieldError(
     elements.tripStartDateError,
-    startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
+    startDate === "" || startDateOk ? "" : VALIDATION_MESSAGES.startDateFormat
   );
   setFieldError(
     elements.tripDayStartError,
@@ -587,8 +680,6 @@ function createRow(item, rowIndex) {
   costInput.inputMode = "numeric";
   costInput.pattern = "\\d+";
 
-  titleInput.placeholder = "必須";
-
   const cells = [
     { key: "start", el: startInput },
     { key: "end", el: endInput },
@@ -626,7 +717,6 @@ function createRow(item, rowIndex) {
   function validateRow() {
     const start = startInput.value.trim();
     const end = endInput.value.trim();
-    const title = titleInput.value.trim();
     const isSimpleMode = isSimpleInputMode();
     const costRaw = costInput.value.trim();
 
@@ -653,12 +743,7 @@ function createRow(item, rowIndex) {
       }
     }
 
-    const titleOk = title.length > 0;
-    setValidity(
-      titleInput,
-      titleOk,
-      titleOk ? "" : "Title は必須です"
-    );
+    setValidity(titleInput, null, "");
 
     let costValidity = null;
     if (!isSimpleMode && costRaw !== "") {
@@ -741,6 +826,7 @@ function updateItem(index, key, value) {
   } else {
     day.rows[index][key] = value;
   }
+  pushHistorySnapshot();
   scheduleAutosave();
 }
 
@@ -762,6 +848,7 @@ function addRow() {
   };
 
   day.rows.push(newItem);
+  pushHistorySnapshot();
   scheduleAutosave();
   render();
 }
@@ -780,6 +867,7 @@ function addDay() {
   });
   normalizeDays();
   state.activeDayIndex = trip.days.length - 1;
+  pushHistorySnapshot();
   scheduleAutosave();
   render();
 }
@@ -797,6 +885,7 @@ function removeDay() {
     state.activeDayIndex = trip.days.length - 1;
   }
   normalizeDays();
+  pushHistorySnapshot();
   scheduleAutosave();
   render();
 }
@@ -805,8 +894,21 @@ function deleteRow(index) {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   day.rows.splice(index, 1);
+  pushHistorySnapshot();
   scheduleAutosave();
   render();
+}
+
+function deleteAllRows() {
+  if (state.readOnly) return;
+  const day = state.data?.trip?.days?.[state.activeDayIndex];
+  if (!day?.rows || day.rows.length === 0) return;
+  if (!window.confirm("表示中の日程の行を全削除します。よろしいですか？")) return;
+  day.rows = [];
+  pushHistorySnapshot();
+  scheduleAutosave();
+  render();
+  showToast("表示中の日程の行を全削除しました");
 }
 
 function downloadJson() {
@@ -832,13 +934,19 @@ function validateImportedData(data) {
   if (!data.trip.days.every((day) => Array.isArray(day.rows) || Array.isArray(day.items))) {
     return "各 day は rows か items 配列が必要です。";
   }
-  if (typeof data.trip.title !== "string" || data.trip.title.trim() === "") {
-    return "trip.title は必須です。";
+  if ("title" in data.trip && typeof data.trip.title !== "string") {
+    return "trip.title は文字列で入力してください。";
   }
-  if (typeof data.trip.timezone !== "string" || !isValidTimezone(data.trip.timezone.trim())) {
+  if ("timezone" in data.trip && typeof data.trip.timezone !== "string") {
+    return "trip.timezone は文字列で入力してください。";
+  }
+  if (typeof data.trip.timezone === "string" && data.trip.timezone.trim() !== "" && !isValidTimezone(data.trip.timezone.trim())) {
     return "trip.timezone は Area/City 形式で入力してください。";
   }
-  if (typeof data.trip.start_date !== "string" || !isValidDate(data.trip.start_date.trim())) {
+  if ("start_date" in data.trip && typeof data.trip.start_date !== "string") {
+    return "trip.start_date は文字列で入力してください。";
+  }
+  if (typeof data.trip.start_date === "string" && data.trip.start_date.trim() !== "" && !isValidDate(data.trip.start_date.trim())) {
     return "trip.start_date は YYYY-MM-DD 形式で入力してください。";
   }
   return "";
@@ -859,6 +967,9 @@ function handleImportJson(file) {
       state.data = normalizeDataStructure(data);
       normalizeDays();
       state.activeDayIndex = 0;
+      state.history = [];
+      state.historyIndex = -1;
+      pushHistorySnapshot();
       scheduleAutosave();
       showToast("JSONを読み込みました");
       render();
@@ -1062,6 +1173,11 @@ function render() {
   renderTable(trip.days[state.activeDayIndex]);
   applyInputModeVisibility();
   elements.removeDay.disabled = state.readOnly || trip.days.length <= 1;
+  if (elements.deleteAllRows) {
+    const day = trip.days[state.activeDayIndex];
+    elements.deleteAllRows.disabled = state.readOnly || !day?.rows || day.rows.length === 0;
+  }
+  updateHistoryButtons();
 }
 
 async function init() {
@@ -1112,14 +1228,12 @@ async function init() {
     }
 
     if (!data) {
-      const response = await fetch(DATA_URL);
-      if (!response.ok) throw new Error("Failed to load JSON");
-      data = await response.json();
-      data = normalizeDataStructure(data);
-      setSaveStatus("サンプルデータを読み込みました");
+      data = createEmptyData();
+      setSaveStatus("新規データを作成しました");
     }
     state.data = data;
     normalizeDays();
+    pushHistorySnapshot();
 
     const onTripMetaInput = () => {
       if (state.readOnly) return;
@@ -1144,6 +1258,7 @@ async function init() {
         renderPdfDayList(trip.days);
       }
       validateTripMeta();
+      pushHistorySnapshot();
       scheduleAutosave();
     };
 
@@ -1161,6 +1276,9 @@ async function init() {
     elements.addDay.addEventListener("click", addDay);
     elements.removeDay.addEventListener("click", removeDay);
     elements.addRow.addEventListener("click", addRow);
+    elements.undo.addEventListener("click", undo);
+    elements.redo.addEventListener("click", redo);
+    elements.deleteAllRows.addEventListener("click", deleteAllRows);
     elements.downloadJson.addEventListener("click", downloadJson);
     elements.importJsonBtn.addEventListener("click", () => elements.importJsonInput.click());
     elements.importJsonInput.addEventListener("change", (event) => {
