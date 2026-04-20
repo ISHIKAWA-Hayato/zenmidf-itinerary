@@ -323,6 +323,12 @@ function isMobileViewport() {
   return window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches;
 }
 
+function enforceMobileSimpleMode() {
+  if (!isMobileViewport()) return;
+  // モバイルでは操作密度を下げるため、保存済み設定より簡易モードを優先する（永続化はしない）
+  setInputMode(INPUT_MODES.SIMPLE, { persist: false });
+}
+
 function renderInputModeSwitch() {
   const modeButtons = [
     [elements.inputModeSimple, INPUT_MODES.SIMPLE],
@@ -1215,6 +1221,7 @@ async function init() {
     const params = new URLSearchParams(window.location.search);
     const readonlyParam = params.get("readonly");
     setReadOnlyMode(readonlyParam === "1" || readonlyParam === "true");
+    let wasMobileViewport = isMobileViewport();
     try {
       const cachedMode = localStorage.getItem(INPUT_MODE_STORAGE_KEY);
       if (cachedMode === INPUT_MODES.SIMPLE || cachedMode === INPUT_MODES.DETAIL) {
@@ -1222,10 +1229,6 @@ async function init() {
       }
     } catch (error) {
       // localStorage が使えない環境では既定値（SIMPLE）を利用
-    }
-    // モバイルでは操作密度を下げるため、保存済み設定より簡易モードを優先する（永続化はしない）
-    if (isMobileViewport()) {
-      state.inputMode = INPUT_MODES.SIMPLE;
     }
     renderInputModeSwitch();
 
@@ -1330,8 +1333,16 @@ async function init() {
     elements.mobileRedo?.addEventListener("click", redo);
     elements.mobileDeleteAllRows?.addEventListener("click", deleteAllRows);
     elements.mobileImportJsonBtn?.addEventListener("click", () => elements.importJsonInput.click());
+    window.addEventListener("resize", () => {
+      const isMobile = isMobileViewport();
+      if (isMobile && !wasMobileViewport) {
+        enforceMobileSimpleMode();
+      }
+      wasMobileViewport = isMobile;
+    });
 
     render();
+    enforceMobileSimpleMode();
     if (state.readOnly) {
       setSaveStatus("閲覧専用モード");
     } else if (!localStorage.getItem(STORAGE_KEY)) {

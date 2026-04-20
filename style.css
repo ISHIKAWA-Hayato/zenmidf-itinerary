@@ -16,6 +16,7 @@
   --ring: rgba(15, 118, 110, 0.28);
   --soft-outline: rgba(15, 118, 110, 0.08);
   --sticky-divider-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.28);
+  /* 下部固定モバイルパネル分の安全余白 */
   --mobile-control-panel-space: 196px;
 }
 
