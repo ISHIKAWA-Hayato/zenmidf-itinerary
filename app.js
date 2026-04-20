@@ -1096,7 +1096,7 @@ function createPdfPage(day, trip, pageNumber, totalPages) {
   dayStartMeta.className = "pdf-meta__item";
   const dayStartLabel = document.createElement("span");
   dayStartLabel.className = "pdf-meta__label";
-  dayStartLabel.textContent = "Day start";
+  dayStartLabel.textContent = "Day Start";
   const dayStartValue = document.createElement("span");
   dayStartValue.className = "pdf-meta__value";
   dayStartValue.textContent = trip.day_start ?? "-";
