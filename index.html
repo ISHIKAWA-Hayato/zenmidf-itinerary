@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>zenmidf-itinerary MVP</title>
-  <link rel="stylesheet" href="style.css?v=20260420a" />
+  <link rel="stylesheet" href="style.css?v=20260420b" />
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
@@ -109,6 +109,22 @@
       </div>
     </section>
 
+    <section class="mobile-control-panel" aria-label="モバイル操作パネル">
+      <div class="mobile-control-panel__primary">
+        <button id="mobile-add-row" type="button">+ 行</button>
+        <button id="mobile-add-day" type="button">+ Day</button>
+        <button id="mobile-download-json" type="button">JSON保存</button>
+        <button id="mobile-share-url" type="button">共有URL</button>
+        <button id="mobile-download-pdf" type="button">PDF出力</button>
+      </div>
+      <div class="mobile-control-panel__secondary">
+        <button id="mobile-undo" type="button">Undo</button>
+        <button id="mobile-redo" type="button">Redo</button>
+        <button id="mobile-delete-all-rows" type="button">全削除</button>
+        <button id="mobile-import-json-btn" type="button">JSON読込</button>
+      </div>
+    </section>
+
     <footer class="app-footer">
       <p>データ: ブラウザ保存またはJSON読込を利用してください</p>
     </footer>
@@ -121,6 +137,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <script src="app.js?v=20260416e" defer></script>
+  <script src="app.js?v=20260420a" defer></script>
 </body>
 </html>

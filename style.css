@@ -16,6 +16,8 @@
   --ring: rgba(15, 118, 110, 0.28);
   --soft-outline: rgba(15, 118, 110, 0.08);
   --sticky-divider-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.28);
+  /* 下部固定モバイルパネル分の安全余白 */
+  --mobile-control-panel-space: 196px;
 }
 
 * {
@@ -361,6 +363,10 @@ body.loading .loading-skeleton {
   background: var(--danger);
 }
 
+.mobile-control-panel {
+  display: none;
+}
+
 .table-wrap {
   overflow-x: auto;
   border-radius: 10px;
@@ -703,11 +709,21 @@ button:focus-visible,
 
 @media (max-width: 480px) {
   .app {
-    padding: 14px max(10px, env(safe-area-inset-right)) 24px max(10px, env(safe-area-inset-left));
+    padding: 14px max(10px, env(safe-area-inset-right)) calc(var(--mobile-control-panel-space) + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   }
 
   .app-header h1 {
     font-size: 22px;
+  }
+
+  .day-actions,
+  .table-actions,
+  #download-pdf {
+    display: none;
+  }
+
+  .pdf-controls {
+    padding-bottom: 10px;
   }
 
   .input-mode-switch__buttons {
@@ -725,6 +741,103 @@ button:focus-visible,
   }
 
   #itinerary-table {
-    min-width: 640px;
+    min-width: 560px;
+  }
+
+  #itinerary-table th[data-col="from"],
+  #itinerary-table td[data-col="from"],
+  #itinerary-table th[data-col="to"],
+  #itinerary-table td[data-col="to"],
+  #itinerary-table th[data-col="location"],
+  #itinerary-table td[data-col="location"],
+  #itinerary-table th[data-col="kind"],
+  #itinerary-table td[data-col="kind"],
+  #itinerary-table th[data-col="category"],
+  #itinerary-table td[data-col="category"],
+  #itinerary-table th[data-col="transport"],
+  #itinerary-table td[data-col="transport"],
+  #itinerary-table th[data-col="cost"],
+  #itinerary-table td[data-col="cost"] {
+    display: none;
+  }
+
+  .mobile-control-panel {
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 1600;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mobile-control-panel__primary,
+  .mobile-control-panel__secondary {
+    display: grid;
+    gap: 6px;
+  }
+
+  .mobile-control-panel__primary {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .mobile-control-panel__secondary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mobile-control-panel button {
+    min-height: 46px;
+    border: none;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    padding: 8px 4px;
+  }
+
+  #mobile-add-row,
+  #mobile-add-day,
+  #mobile-download-pdf,
+  #mobile-download-json {
+    background: var(--primary);
+  }
+
+  #mobile-share-url {
+    background: #1d4ed8;
+  }
+
+  #mobile-undo,
+  #mobile-redo,
+  #mobile-import-json-btn {
+    background: #475569;
+  }
+
+  #mobile-delete-all-rows {
+    background: var(--danger);
+  }
+
+  .mobile-control-panel button:disabled {
+    opacity: 0.5;
+  }
+}
+
+@media (max-width: 380px) {
+  #itinerary-table th[data-col="end"],
+  #itinerary-table td[data-col="end"],
+  #itinerary-table th[data-col="memo"],
+  #itinerary-table td[data-col="memo"] {
+    display: none;
+  }
+
+  #itinerary-table {
+    min-width: 420px;
   }
 }
