@@ -1206,10 +1206,6 @@ async function exportPdf() {
           --danger: #dc2626;
           --success: #16a34a;
           --ring: rgba(15, 118, 110, 0.28);
-        }
-        .pdf-root,
-        .pdf-page {
-          font-family: "Noto Sans JP", "Noto Sans", "Roboto", "Hiragino Kaku Gothic Pro", "Meiryo", sans-serif;
         }`;
         clonedDoc.head.appendChild(rootVars);
       },
