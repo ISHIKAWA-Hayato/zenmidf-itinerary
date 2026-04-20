@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>zenmidf-itinerary MVP</title>
-  <link rel="stylesheet" href="style.css?v=20260416e" />
+  <link rel="stylesheet" href="style.css?v=20260420a" />
 </head>
 <body>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true" hidden></div>
@@ -83,8 +83,9 @@
         <button id="share-url" type="button">共有URLをコピー</button>
         <input id="import-json" type="file" accept="application/json" hidden />
       </div>
+      <p id="table-scroll-hint" class="table-scroll-hint" role="note" aria-label="テーブル操作補足">表は左右にスワイプして確認できます</p>
       <div class="table-wrap">
-        <table id="itinerary-table">
+        <table id="itinerary-table" aria-describedby="table-scroll-hint">
           <caption id="itinerary-table-caption" class="sr-only">日ごとの行程編集テーブル</caption>
           <thead>
             <tr>
