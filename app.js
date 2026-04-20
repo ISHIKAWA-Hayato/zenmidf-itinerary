@@ -1221,8 +1221,9 @@ async function init() {
         state.inputMode = cachedMode;
       }
     } catch (error) {
-      // localStorage が使えない環境では既定値を利用
+      // localStorage が使えない環境では既定値（SIMPLE）を利用
     }
+    // モバイルでは操作密度を下げるため、保存済み設定より簡易モードを優先する（永続化はしない）
     if (isMobileViewport()) {
       state.inputMode = INPUT_MODES.SIMPLE;
     }

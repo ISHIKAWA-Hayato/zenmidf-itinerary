@@ -16,6 +16,7 @@
   --ring: rgba(15, 118, 110, 0.28);
   --soft-outline: rgba(15, 118, 110, 0.08);
   --sticky-divider-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.28);
+  --mobile-control-panel-space: 196px;
 }
 
 * {
@@ -707,7 +708,7 @@ button:focus-visible,
 
 @media (max-width: 480px) {
   .app {
-    padding: 14px max(10px, env(safe-area-inset-right)) calc(196px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    padding: 14px max(10px, env(safe-area-inset-right)) calc(var(--mobile-control-panel-space) + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   }
 
   .app-header h1 {
@@ -756,11 +757,10 @@ button:focus-visible,
   #itinerary-table td[data-col="transport"],
   #itinerary-table th[data-col="cost"],
   #itinerary-table td[data-col="cost"] {
-    display: none !important;
+    display: none;
   }
 
   .mobile-control-panel {
-    display: block;
     position: fixed;
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
@@ -833,7 +833,7 @@ button:focus-visible,
   #itinerary-table td[data-col="end"],
   #itinerary-table th[data-col="memo"],
   #itinerary-table td[data-col="memo"] {
-    display: none !important;
+    display: none;
   }
 
   #itinerary-table {
