@@ -10,9 +10,12 @@
   --primary-soft: #e9f7f6;
   --border: #dbe3ea;
   --table-header: #eef3f6;
+  --table-even-row: #fbfdff;
   --danger: #dc2626;
   --success: #16a34a;
   --ring: rgba(15, 118, 110, 0.28);
+  --soft-outline: rgba(15, 118, 110, 0.08);
+  --sticky-divider-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.28);
 }
 
 * {
@@ -399,30 +402,18 @@ body.loading .loading-skeleton {
   position: sticky;
   right: 0;
   z-index: 2;
-  background-clip: padding-box;
+  box-shadow: var(--sticky-divider-shadow);
 }
 
 #itinerary-table th[data-col="actions"] {
   background: var(--table-header);
 }
 
-#itinerary-table td[data-col="actions"] {
-  background: #fff;
-}
-
 #itinerary-table tbody tr:nth-child(even) td {
-  background: #fbfdff;
-}
-
-#itinerary-table tbody tr:nth-child(even) td[data-col="actions"] {
-  background: #fbfdff;
+  background: var(--table-even-row);
 }
 
 #itinerary-table tbody tr:hover td {
-  background: var(--primary-soft);
-}
-
-#itinerary-table tbody tr:hover td[data-col="actions"] {
   background: var(--primary-soft);
 }
 
@@ -623,7 +614,6 @@ button:focus-visible,
 @media (max-width: 720px) {
   .app {
     padding: 20px 14px 38px;
-    font-size: 15px;
   }
 
   .app-header,
@@ -693,7 +683,7 @@ button:focus-visible,
   }
 
   .table-wrap {
-    box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+    box-shadow: inset 0 0 0 1px var(--soft-outline);
   }
 
   .table-actions,
@@ -713,7 +703,7 @@ button:focus-visible,
 
 @media (max-width: 480px) {
   .app {
-    padding: 14px 10px 24px;
+    padding: 14px max(10px, env(safe-area-inset-right)) 24px max(10px, env(safe-area-inset-left));
   }
 
   .app-header h1 {
