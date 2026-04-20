@@ -98,6 +98,7 @@ const COLUMN_LABELS = {
 };
 // URLが極端に長くなるとブラウザや共有先で扱えないため、一般的な上限（~64KB）未満に制限
 const MAX_SHARE_DATA_CHARS = 60000;
+const MOBILE_MAX_WIDTH = 480;
 
 const state = {
   data: null,
@@ -147,6 +148,15 @@ const elements = {
   shareUrl: document.getElementById("share-url"),
   pdfDayList: document.getElementById("pdf-day-list"),
   downloadPdf: document.getElementById("download-pdf"),
+  mobileAddRow: document.getElementById("mobile-add-row"),
+  mobileAddDay: document.getElementById("mobile-add-day"),
+  mobileDownloadJson: document.getElementById("mobile-download-json"),
+  mobileShareUrl: document.getElementById("mobile-share-url"),
+  mobileDownloadPdf: document.getElementById("mobile-download-pdf"),
+  mobileUndo: document.getElementById("mobile-undo"),
+  mobileRedo: document.getElementById("mobile-redo"),
+  mobileDeleteAllRows: document.getElementById("mobile-delete-all-rows"),
+  mobileImportJsonBtn: document.getElementById("mobile-import-json-btn"),
   pdfRoot: document.getElementById("pdf-root"),
   tableCaption: document.getElementById("itinerary-table-caption"),
   saveStatus: document.getElementById("save-status"),
@@ -285,8 +295,19 @@ function setReadOnlyMode(readOnly) {
     elements.undo,
     elements.redo,
     elements.deleteAllRows,
+    elements.downloadJson,
+    elements.downloadPdf,
     elements.importJsonBtn,
     elements.importJsonInput,
+    elements.mobileAddRow,
+    elements.mobileAddDay,
+    elements.mobileDownloadJson,
+    elements.mobileShareUrl,
+    elements.mobileDownloadPdf,
+    elements.mobileUndo,
+    elements.mobileRedo,
+    elements.mobileDeleteAllRows,
+    elements.mobileImportJsonBtn,
   ];
   editTargets.forEach((el) => {
     if (!el) return;
@@ -296,6 +317,10 @@ function setReadOnlyMode(readOnly) {
 
 function isSimpleInputMode() {
   return state.inputMode === INPUT_MODES.SIMPLE;
+}
+
+function isMobileViewport() {
+  return window.matchMedia(`(max-width: ${MOBILE_MAX_WIDTH}px)`).matches;
 }
 
 function renderInputModeSwitch() {
@@ -388,6 +413,8 @@ function updateHistoryButtons() {
   const canRedo = !state.readOnly && state.historyIndex >= 0 && state.historyIndex < state.history.length - 1;
   if (elements.undo) elements.undo.disabled = !canUndo;
   if (elements.redo) elements.redo.disabled = !canRedo;
+  if (elements.mobileUndo) elements.mobileUndo.disabled = !canUndo;
+  if (elements.mobileRedo) elements.mobileRedo.disabled = !canRedo;
 }
 
 function pushHistorySnapshot() {
@@ -1175,7 +1202,9 @@ function render() {
   elements.removeDay.disabled = state.readOnly || trip.days.length <= 1;
   if (elements.deleteAllRows) {
     const day = trip.days[state.activeDayIndex];
-    elements.deleteAllRows.disabled = state.readOnly || !day?.rows || day.rows.length === 0;
+    const deleteDisabled = state.readOnly || !day?.rows || day.rows.length === 0;
+    elements.deleteAllRows.disabled = deleteDisabled;
+    if (elements.mobileDeleteAllRows) elements.mobileDeleteAllRows.disabled = deleteDisabled;
   }
   updateHistoryButtons();
 }
@@ -1193,6 +1222,9 @@ async function init() {
       }
     } catch (error) {
       // localStorage が使えない環境では既定値を利用
+    }
+    if (isMobileViewport()) {
+      state.inputMode = INPUT_MODES.SIMPLE;
     }
     renderInputModeSwitch();
 
@@ -1288,6 +1320,15 @@ async function init() {
     });
     elements.shareUrl.addEventListener("click", copyShareUrl);
     elements.downloadPdf.addEventListener("click", exportPdf);
+    elements.mobileAddRow?.addEventListener("click", addRow);
+    elements.mobileAddDay?.addEventListener("click", addDay);
+    elements.mobileDownloadJson?.addEventListener("click", downloadJson);
+    elements.mobileShareUrl?.addEventListener("click", copyShareUrl);
+    elements.mobileDownloadPdf?.addEventListener("click", exportPdf);
+    elements.mobileUndo?.addEventListener("click", undo);
+    elements.mobileRedo?.addEventListener("click", redo);
+    elements.mobileDeleteAllRows?.addEventListener("click", deleteAllRows);
+    elements.mobileImportJsonBtn?.addEventListener("click", () => elements.importJsonInput.click());
 
     render();
     if (state.readOnly) {
