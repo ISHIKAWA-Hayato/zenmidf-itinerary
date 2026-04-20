@@ -1071,12 +1071,37 @@ function createPdfPage(day, trip, pageNumber, totalPages) {
 
   const subtitle = document.createElement("div");
   subtitle.className = "pdf-subtitle";
-  subtitle.textContent = `Day ${day.day} / ${day.date}`;
+  const dayLabel = document.createElement("span");
+  dayLabel.className = "pdf-subtitle__day";
+  dayLabel.textContent = `Day ${day.day}`;
+  const dateLabel = document.createElement("span");
+  dateLabel.className = "pdf-subtitle__date";
+  dateLabel.textContent = day.date ?? "-";
+  subtitle.append(dayLabel, dateLabel);
   header.appendChild(subtitle);
 
   const meta = document.createElement("div");
   meta.className = "pdf-meta";
-  meta.textContent = `Timezone: ${trip.timezone ?? "-"} / DayStart: ${trip.day_start ?? "-"}`;
+  const timezoneMeta = document.createElement("div");
+  timezoneMeta.className = "pdf-meta__item";
+  const timezoneLabel = document.createElement("span");
+  timezoneLabel.className = "pdf-meta__label";
+  timezoneLabel.textContent = "Timezone";
+  const timezoneValue = document.createElement("span");
+  timezoneValue.className = "pdf-meta__value";
+  timezoneValue.textContent = trip.timezone ?? "-";
+  timezoneMeta.append(timezoneLabel, timezoneValue);
+
+  const dayStartMeta = document.createElement("div");
+  dayStartMeta.className = "pdf-meta__item";
+  const dayStartLabel = document.createElement("span");
+  dayStartLabel.className = "pdf-meta__label";
+  dayStartLabel.textContent = "Day Start";
+  const dayStartValue = document.createElement("span");
+  dayStartValue.className = "pdf-meta__value";
+  dayStartValue.textContent = trip.day_start ?? "-";
+  dayStartMeta.append(dayStartLabel, dayStartValue);
+  meta.append(timezoneMeta, dayStartMeta);
   header.appendChild(meta);
   page.appendChild(header);
 
@@ -1096,7 +1121,8 @@ function createPdfPage(day, trip, pageNumber, totalPages) {
     headerRow.appendChild(th);
   });
   const tbody = table.querySelector("tbody");
-  (day.rows || []).forEach((item) => {
+  const rows = day.rows || [];
+  rows.forEach((item) => {
     const tr = document.createElement("tr");
     columns.forEach((column) => {
       const td = document.createElement("td");
@@ -1105,7 +1131,19 @@ function createPdfPage(day, trip, pageNumber, totalPages) {
     });
     tbody.appendChild(tr);
   });
-  page.appendChild(table);
+  if (rows.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.className = "pdf-table__empty";
+    td.colSpan = columns.length;
+    td.textContent = "No itinerary rows for this day.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+  const tableWrap = document.createElement("div");
+  tableWrap.className = "pdf-table-wrap";
+  tableWrap.appendChild(table);
+  page.appendChild(tableWrap);
 
   const footer = document.createElement("div");
   footer.className = "pdf-footer";
