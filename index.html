@@ -83,9 +83,9 @@
         <button id="share-url" type="button">共有URLをコピー</button>
         <input id="import-json" type="file" accept="application/json" hidden />
       </div>
-      <p class="table-scroll-hint" role="note">表は左右にスワイプして確認できます</p>
+      <p id="table-scroll-hint" class="table-scroll-hint">表は左右にスワイプして確認できます</p>
       <div class="table-wrap">
-        <table id="itinerary-table">
+        <table id="itinerary-table" aria-describedby="table-scroll-hint">
           <caption id="itinerary-table-caption" class="sr-only">日ごとの行程編集テーブル</caption>
           <thead>
             <tr>

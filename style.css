@@ -369,7 +369,7 @@ body.loading .loading-skeleton {
   display: none;
   margin: 0 0 8px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 
 #itinerary-table {
@@ -402,11 +402,27 @@ body.loading .loading-skeleton {
   background-clip: padding-box;
 }
 
+#itinerary-table th[data-col="actions"] {
+  background: var(--table-header);
+}
+
+#itinerary-table td[data-col="actions"] {
+  background: #fff;
+}
+
 #itinerary-table tbody tr:nth-child(even) td {
   background: #fbfdff;
 }
 
+#itinerary-table tbody tr:nth-child(even) td[data-col="actions"] {
+  background: #fbfdff;
+}
+
 #itinerary-table tbody tr:hover td {
+  background: var(--primary-soft);
+}
+
+#itinerary-table tbody tr:hover td[data-col="actions"] {
   background: var(--primary-soft);
 }
 
@@ -607,6 +623,7 @@ button:focus-visible,
 @media (max-width: 720px) {
   .app {
     padding: 20px 14px 38px;
+    font-size: 15px;
   }
 
   .app-header,
@@ -615,10 +632,6 @@ button:focus-visible,
   .pdf-controls,
   .table-section {
     border-radius: 10px;
-  }
-
-  .app {
-    font-size: 15px;
   }
 
   .app-header h1 {
@@ -689,7 +702,7 @@ button:focus-visible,
   }
 
   #itinerary-table {
-    min-width: 700px;
+    min-width: 760px;
   }
 
   #itinerary-table th,
