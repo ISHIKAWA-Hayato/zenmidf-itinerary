@@ -2,7 +2,6 @@
   color-scheme: light;
   --bg: #f3f6f8;
   --card: #ffffff;
-  /* コントラスト改善（可読性/アクセシビリティ向上） */
   --text: #111827;
   --muted: #374151;
   --primary: #0f766e;
@@ -16,8 +15,9 @@
   --ring: rgba(15, 118, 110, 0.28);
   --soft-outline: rgba(15, 118, 110, 0.08);
   --sticky-divider-shadow: -8px 0 8px -8px rgba(15, 23, 42, 0.28);
-  /* 下部固定モバイルパネル分の安全余白 */
   --mobile-control-panel-space: 196px;
+  --secondary: #64748b;
+  --secondary-strong: #475569;
 }
 
 * {
@@ -670,6 +670,75 @@ button:focus-visible,
   color: #6b7280;
   font-size: 10px;
   letter-spacing: 0.01em;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f8fafc;
+    --muted: #94a3b8;
+    --border: #334155;
+    --table-header: #1e293b;
+    --table-even-row: #1e293b;
+    --primary-soft: #134e4a;
+  }
+  .input {
+    background: #0f172a;
+    color: #f8fafc;
+  }
+}
+
+#itinerary-table td[data-col="actions"] {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+  min-width: 140px; 
+}
+
+.copy-btn,
+.move-btn {
+  border: none;
+  color: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 700;
+  transition: opacity 0.16s ease, transform 0.12s ease;
+}
+
+.copy-btn {
+  background: var(--secondary);
+}
+
+.copy-btn:hover {
+  background: var(--secondary-strong);
+}
+
+.move-btn {
+  background: var(--primary);
+  min-width: 28px;
+}
+
+.move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  #itinerary-table td[data-col="actions"] {
+    min-width: 110px;
+    padding: 8px 4px;
+  }
+  
+  .copy-btn,
+  .move-btn,
+  .delete-btn {
+    padding: 10px 8px; 
+    font-size: 14px;
+  }
 }
 
 @media (max-width: 1024px) {
