@@ -737,6 +737,23 @@ function createRow(item, rowIndex) {
 
   const deleteTd = document.createElement("td");
   const deleteBtn = document.createElement("button");
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "copy-btn"; // style.css で装飾してください
+  copyBtn.textContent = "複";
+  copyBtn.disabled = state.readOnly;
+  copyBtn.onclick = () => duplicateRow(rowIndex);
+  deleteTd.appendChild(copyBtn);
+  const upBtn = document.createElement("button");
+  upBtn.textContent = "↑";
+  upBtn.disabled = state.readOnly || rowIndex === 0;
+  upBtn.onclick = () => moveRow(rowIndex, -1);
+  deleteTd.appendChild(upBtn);
+  const downBtn = document.createElement("button");
+  downBtn.textContent = "↓";
+  downBtn.disabled = state.readOnly;
+  downBtn.onclick = () => moveRow(rowIndex, 1);
+  deleteTd.appendChild(downBtn);
+  const deleteBtn = document.createElement("button");
   deleteBtn.className = "delete-btn";
   deleteBtn.type = "button";
   deleteBtn.textContent = "削除";
@@ -867,18 +884,14 @@ function addRow() {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   if (!day.rows) day.rows = [];
+  const lastRow = day.rows[day.rows.length - 1];
+  const defaultStart = lastRow ? (lastRow.end || "") : "";
 
-  const newItem = {
-    id: generateItemId(),
+  const newItem = normalizeRow({
+    start: defaultStart, 
     type: "place",
-    start: "",
-    end: "",
-    title: "",
-    location: "",
     kind: "spot",
-    cost: 0,
-    memo: "",
-  };
+  });
 
   day.rows.push(newItem);
   pushHistorySnapshot();
@@ -927,6 +940,34 @@ function deleteRow(index) {
   if (state.readOnly) return;
   const day = state.data.trip.days[state.activeDayIndex];
   day.rows.splice(index, 1);
+  pushHistorySnapshot();
+  scheduleAutosave();
+  render();
+}
+
+function duplicateRow(index) {
+  if (state.readOnly) return;
+  const day = state.data.trip.days[state.activeDayIndex];
+  const sourceRow = day.rows[index];
+  const newRow = normalizeRow({ ...sourceRow, id: generateItemId() });
+  
+  day.rows.splice(index + 1, 0, newRow); // 元の行の直下に挿入
+  pushHistorySnapshot();
+  scheduleAutosave();
+  render();
+  showToast("行を複製しました");
+}
+
+function moveRow(index, direction) {
+  if (state.readOnly) return;
+  const day = state.data.trip.days[state.activeDayIndex];
+  const targetIndex = index + direction;
+
+  if (targetIndex < 0 || targetIndex >= day.rows.length) return;
+
+  const [movedItem] = day.rows.splice(index, 1);
+  day.rows.splice(targetIndex, 0, movedItem);
+
   pushHistorySnapshot();
   scheduleAutosave();
   render();
